@@ -267,8 +267,6 @@ class MultiZone(Light):
 
     @socketLock
     def updateInfo(self):
-        if self.updating: return True
-        self.updating = True
         try:
             self.power = 1 if self.device.get_power() == 65535 else 0
             if not self.pending:
@@ -314,15 +312,17 @@ class MultiZone(Light):
         if self.connected:
             try:
                 _color = int(command.get('value'))
+                zone = deepcopy(self.current_zone)
+                if self.current_zone != 0: zone -= 1
                 if self.current_zone == 0:
                     self.device.set_zone_color(self.current_zone, self.num_zones, COLORS[_color][1], duration=self.duration, rapid=True)
                 else:
-                    self.device.set_zone_color(self.current_zone - 1, self.current_zone - 1, COLORS[_color][1], duration=self.duration, rapid=True)
+                    self.device.set_zone_color(zone, zone, COLORS[_color][1], duration=self.duration, rapid=True)
                 LOGGER.info('Received SetColor command from ISY. Changing {} color to: {}'.format(self.address, COLORS[_color][0]))
             except (lifxlan.WorkflowException, IOError) as ex:
                 LOGGER.error('mz setcolor error {}'.format(str(ex)))
             for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
-                self.setDriver(driver, self.color[self.current_zone - 1][ind])
+                self.setDriver(driver, COLORS[_color][1][ind])
         else: LOGGER.info('Received SetColor, however the bulb is in a disconnected state... ignoring')
 
     @socketLock
@@ -334,30 +334,30 @@ class MultiZone(Light):
                 if _cmd == 'SETZ':
                     self.current_zone = int(_val)
                     if self.current_zone > self.num_zones: self.current_zone = 0
-                    driver = ('GV4', self.current_zone)
+                    driver = ['GV4', self.current_zone]
                 zone = deepcopy(self.current_zone)
                 if self.current_zone != 0: zone -= 1
                 new_color = list(self.color[zone])
                 if _cmd == 'SETH':
                     new_color[0] = int(_val)
-                    driver = ('GV1', new_color[0])
+                    driver = ['GV1', new_color[0]]
                 elif _cmd == 'SETS':
                     new_color[1] = int(_val)
-                    driver = ('GV2', new_color[1])
+                    driver = ['GV2', new_color[1]]
                 elif _cmd == 'SETB':
                     new_color[2] = int(_val)
-                    driver = ('GV3', new_color[2])
+                    driver = ['GV3', new_color[2]]
                 elif _cmd == 'SETK':
                     new_color[3] = int(_val)
-                    driver = ('CLITEMP', new_color[3])
+                    driver = ['CLITEMP', new_color[3]]
                 elif _cmd == 'SETD':
                     self.duration = _val
-                    driver = ('RR', self.duration)
+                    driver = ['RR', self.duration]
                 self.color[zone] = new_color
                 if self.current_zone == 0:
                     self.device.set_zone_color(0, self.num_zones, new_color, self.duration, True)
                 else:
-                    self.device.set_zone_color(zone, zone, new_color, self.duration, True, 0)
+                    self.device.set_zone_color(zone, zone, new_color, self.duration, True)
             except (lifxlan.WorkflowException, TypeError) as ex:
                 LOGGER.error('setmanual mz error {}'.format(ex))
             LOGGER.info('Received manual change, updating the mz bulb zone {} to: {} duration: {}'.format(zone, new_color, self.duration))
