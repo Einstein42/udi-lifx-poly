@@ -4,7 +4,7 @@ LiFX NodeServer for UDI Polyglot v2
 by Einstein.42 (James Milne) milne.james@gmail.com
 """
 
-import polyglot
+import polyinterface as polyglot
 import sys
 import time
 import lifxlan
