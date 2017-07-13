@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/usr/bin/env python3
 """
 LiFX NodeServer for UDI Polyglot v2
 by Einstein.42 (James Milne) milne.james@gmail.com
@@ -73,7 +73,7 @@ class Control(polyglot.Controller):
     def shortPoll(self, timer = 10):
         """
         Overridden shortPoll. It is imperative that you super this if you override it
-        as the threading.Timer loop in in the parent method.
+        as the threading.Timer loop is in the parent method.
         """
         super().shortPoll(timer)
         self.updateNodes()
@@ -488,7 +488,11 @@ class Group(polyglot.Node):
 
 if __name__ == "__main__":
     try:
-        poly = polyglot.Interface()
+        """
+        Grab the "LIFX_NS" variable from the .polyglot/.env file. This is where
+        we tell it what profile number this NodeServer is.
+        """
+        poly = polyglot.Interface("LIFX_NS")
         poly.start()
         lifx = Control(poly)
         while True:

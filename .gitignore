@@ -6,6 +6,7 @@ __pycache__/
 # Project Specific
 logs/
 polyglot.py
+temp/
 
 # C extensions
 *.so
