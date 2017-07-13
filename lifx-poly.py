@@ -415,6 +415,7 @@ class Group(polyglot.Node):
     def __init__(self, parent, primary, address, gid, label, gupdatedat):
         super().__init__(parent, primary, address, 'LIFX Group ' + str(label))
         self.group = gid
+        self.label = label
         self.updated_at = gupdatedat
         self.members = None
 
