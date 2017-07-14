@@ -57,16 +57,10 @@ class Control(polyglot.Controller):
         self.started = False
         LOGGER.info('Started LiFX Protocol')
 
-    def gotConfig(self, config):
-        super(Control, self).gotConfig(config)
-        if not self.poly.getNode(self.address):
-            self.addNode(self)
-            LOGGER.info('Waiting on Primary node to be added.......')
-        elif not self.started:
-            self.started = True
-            self.start()
-
     def start(self):
+        """
+        Start polyinterface polls.
+        """
         self.startPolls()
         self.discover()
 
