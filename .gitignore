@@ -69,3 +69,7 @@ target/
 .ipynb_checkpoints
 .idea/
 
+#Project Specific
+lifxlan.old/
+profile/
+polyinterface
