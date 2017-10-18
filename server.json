@@ -1,0 +1,18 @@
+{
+    "name": "LIFX",
+    "docs": "https://www.lifx.com",
+    "type": "python",
+    "executable": "polylifx.py",
+    "description": "Add LIFX control to the ISY994.",
+    "notice": "\"LIFX\" is trademarked., see http://www.lifx.com for more information. This Node Server is neither developed by nor endorsed by LIFX.",
+    "credits": [
+        {
+            "title": "polylifx: A Python library for LIFX",
+            "author": "James Milne (Einstein.42)",
+            "version": "0.1.5",
+            "date": "June 30, 2016",
+            "source": "https://github.com/Einstein42/lifx-nodeserver",
+            "license": "https://github.com/Einstein42/lifx-nodeserver/blob/master/LICENSE"
+        }
+    ]
+}

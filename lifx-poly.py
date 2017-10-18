@@ -487,7 +487,7 @@ if __name__ == "__main__":
         Grab the "LIFX_NS" variable from the .polyglot/.env file. This is where
         we tell it what profile number this NodeServer is.
         """
-        poly = polyglot.Interface("LIFX_NS")
+        poly = polyglot.Interface("LiFX")
         poly.start()
         lifx = Control(poly)
         while True:
