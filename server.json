@@ -1,5 +1,5 @@
 {
-    "name": "LIFX",
+    "name": "LiFX",
     "docs": "https://www.lifx.com",
     "type": "python",
     "executable": "polylifx.py",
