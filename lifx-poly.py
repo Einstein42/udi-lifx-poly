@@ -1,4 +1,4 @@
-##!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 LiFX NodeServer for UDI Polyglot v2
 by Einstein.42 (James Milne) milne.james@gmail.com
@@ -6,6 +6,7 @@ by Einstein.42 (James Milne) milne.james@gmail.com
 
 import polyinterface as polyglot
 import time
+import sys
 import lifxlan
 from functools import wraps
 from copy import deepcopy

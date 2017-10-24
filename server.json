@@ -3,6 +3,7 @@
     "docs": "https://www.lifx.com",
     "type": "python3",
     "executable": "lifx-poly.py",
+    "install": "install.sh",
     "description": "Add LIFX control to the ISY994.",
     "notice": "\"LIFX\" is trademarked., see http://www.lifx.com for more information. This Node Server is neither developed by nor endorsed by LIFX.",
     "credits": [
