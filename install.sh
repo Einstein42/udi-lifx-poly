@@ -1,2 +1,3 @@
 #!/usr/bin/env bash
-sudo pip3 install -r requirements.txt -t .
+pip3 install -r requirements.txt -t .
+rm -Rf *.dist-info
