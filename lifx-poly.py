@@ -310,9 +310,9 @@ class MultiZone(Light):
                 zone = deepcopy(self.current_zone)
                 if self.current_zone != 0: zone -= 1
                 if self.current_zone == 0:
-                    self.device.set_zone_color(self.current_zone, self.num_zones, COLORS[_color][1], duration=self.duration, rapid=True)
+                    self.device.set_zone_color(self.current_zone, self.num_zones, COLORS[_color][1], self.duration, True)
                 else:
-                    self.device.set_zone_color(zone, zone, COLORS[_color][1], duration=self.duration, rapid=True)
+                    self.device.set_zone_color(zone, zone, COLORS[_color][1], self.duration, True)
                 LOGGER.info('Received SetColor command from ISY. Changing {} color to: {}'.format(self.address, COLORS[_color][0]))
             except (lifxlan.WorkflowException, IOError) as ex:
                 LOGGER.error('mz setcolor error {}'.format(str(ex)))
@@ -451,9 +451,9 @@ class Group(polyglot.Node):
         for d in self.members:
             try:
                 if d.supports_multizone():
-                    d.set_zone_color(0, len(d.get_color_zones()), COLORS[_color][1], duration = 0, rapid = True)
+                    d.set_zone_color(0, len(d.get_color_zones()), COLORS[_color][1], 0, True)
                 elif d.supports_color():
-                    d.set_color(COLORS[_color][1], duration=0, rapid = True)
+                    d.set_color(COLORS[_color][1], 0, True)
             except (lifxlan.WorkflowException, IOError) as ex:
                 LOGGER.error('group setcolor error caught %s', str(ex))
         LOGGER.info('Received SetColor command for group {} from ISY. Changing color to: {} for all {} members.'.format(self.name, COLORS[_color][0], len(self.members)))
@@ -485,7 +485,7 @@ class Group(polyglot.Node):
 if __name__ == "__main__":
     try:
         """
-        Grab the "LIFX_NS" variable from the .polyglot/.env file. This is where
+        Grab the "LiFX" variable from the .polyglot/.env file. This is where
         we tell it what profile number this NodeServer is.
         """
         poly = polyglot.Interface("LiFX")
