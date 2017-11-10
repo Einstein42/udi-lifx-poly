@@ -497,8 +497,9 @@ if __name__ == "__main__":
         poly.start()
         lifx = Control(poly)
         while True:
-            input = poly.inQueue.get()
-            lifx.parseInput(input)
-            poly.inQueue.task_done()
+            if not _SLOCK:
+                input = poly.inQueue.get()
+                lifx.parseInput(input)
+                poly.inQueue.task_done()
     except (KeyboardInterrupt, SystemExit):
         sys.exit(0)
