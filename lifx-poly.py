@@ -58,6 +58,7 @@ class Control(polyglot.Controller):
         self.started = False
         LOGGER.info('Started LiFX Protocol')
 
+
     def start(self):
         """
         Start polyinterface polls.
@@ -65,7 +66,7 @@ class Control(polyglot.Controller):
         self.startPolls()
         self.discover()
 
-    def shortPoll(self, timer = 10):
+    def shortPoll(self, timer = 30):
         """
         Overridden shortPoll. It is imperative that you super this if you override it
         as the threading.Timer loop is in the parent method.
@@ -208,18 +209,21 @@ class Light(polyglot.Node):
             self.setDriver(driver, self.color[ind])
         self.setDriver('RR', self.duration)
 
-    @socketLock
     def updateInfo(self):
+        global _SLOCK
         try:
+            _SLOCK = True
             self.power = 1 if self.device.get_power() == 65535 else 0
             self.color = list(self.device.get_color())
             self.uptime = self.nanosec_to_hours(self.device.get_uptime())
+            _SLOCK = False
             for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
                 self.setDriver(driver, self.color[ind])
             self.setDriver('ST', self.power)
             self.connected = 1
             self.tries = 0
         except (lifxlan.WorkflowException, OSError) as ex:
+            _SLOCK = False
             if time.time() - self.lastupdate >= 60:
                 LOGGER.error('During Query, device {} wasn\'t found. Marking as offline'.format(self.name))
                 self.connected = 0
@@ -260,13 +264,15 @@ class MultiZone(Light):
         self.current_zone = 0
         self.new_color = None
 
-    @socketLock
     def updateInfo(self):
+        global _SLOCK
         try:
+            _SLOCK = True
             self.power = 1 if self.device.get_power() == 65535 else 0
             if not self.pending:
                 self.color = self.device.get_color_zones()
             self.uptime = self.nanosec_to_hours(self.device.get_uptime())
+            _SLOCK = False
             zone = deepcopy(self.current_zone)
             if self.current_zone != 0: zone -= 1
             for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
@@ -274,6 +280,7 @@ class MultiZone(Light):
             self.setDriver('ST', self.power)
             self.connected = 1
         except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
+            _SLOCK = False
             if time.time() - self.lastupdate >= 60:
                 LOGGER.error('During Query, device mz %s wasn\'t found for over 60 seconds. Marking as offline', self.name)
                 self.connected = 0
@@ -412,18 +419,19 @@ class Group(polyglot.Node):
         self.group = gid
         self.label = label
         self.updated_at = gupdatedat
-        self.members = None
+        self.members = []
 
     def start(self):
         self.query()
         #self.reportDrivers()
 
-    @socketLock
     def updateInfo(self):
+        global _SLOCK
+        _SLOCK = True
         self.members = list(filter(lambda d: d.group == self.group, self.parent.lifxLan.get_lights()))
+        _SLOCK = False
         self.setDriver('ST', len(self.members))
 
-    @socketLock
     def query(self, command = None):
         self.updateInfo()
 
@@ -450,10 +458,7 @@ class Group(polyglot.Node):
         _color = int(command.get('value'))
         for d in self.members:
             try:
-                if d.supports_multizone():
-                    d.set_zone_color(0, len(d.get_color_zones()), COLORS[_color][1], 0, True)
-                elif d.supports_color():
-                    d.set_color(COLORS[_color][1], 0, True)
+                d.set_color(COLORS[_color][1], 0, True)
             except (lifxlan.WorkflowException, IOError) as ex:
                 LOGGER.error('group setcolor error caught %s', str(ex))
         LOGGER.info('Received SetColor command for group {} from ISY. Changing color to: {} for all {} members.'.format(self.name, COLORS[_color][0], len(self.members)))
@@ -494,5 +499,6 @@ if __name__ == "__main__":
         while True:
             input = poly.inQueue.get()
             lifx.parseInput(input)
+            poly.inQueue.task_done()
     except (KeyboardInterrupt, SystemExit):
         sys.exit(0)
