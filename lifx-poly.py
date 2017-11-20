@@ -58,7 +58,6 @@ class Control(polyglot.Controller):
         self.started = False
         LOGGER.info('Started LiFX Protocol')
 
-
     def start(self):
         """
         Start polyinterface polls.
@@ -74,7 +73,8 @@ class Control(polyglot.Controller):
         super().shortPoll(timer)
         self.updateNodes()
 
-    def discover(self):
+    @socketLock
+    def discover(self, command = {}):
         if self.discovery == True: return
         self.discovery = True
         LOGGER.info('Starting LiFX Discovery...')
@@ -89,16 +89,19 @@ class Control(polyglot.Controller):
                         LOGGER.info('Found MultiZone Bulb: {}({})'.format(name, address))
                         self.nodes[address] = MultiZone(self, self.address, address, name, d)
                         self.addNode(self.nodes[address])
+                        time.sleep(.5)
                     else:
                         LOGGER.info('Found Bulb: {}({})'.format(name, address))
                         self.nodes[address] = Light(self, self.address, address, name, d)
                         self.addNode(self.nodes[address])
+                        time.sleep(.5)
                 gid, glabel, gupdatedat = d.get_group_tuple()
                 gaddress = glabel.replace("'", "").replace(' ', '').lower()[:12]
                 if not gaddress in self.nodes:
                     LOGGER.info('Found LiFX Group: {}'.format(glabel))
                     self.nodes[gaddress] = Group(self, self.address, gaddress, gid, glabel.replace("'", ""), gupdatedat)
                     self.addNode(self.nodes[gaddress])
+                    time.sleep(.5)
         except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
             LOGGER.error('discovery Error: {}'.format(ex))
         self.discovery = False
@@ -108,8 +111,9 @@ class Control(polyglot.Controller):
             self.nodes[node].updateInfo()
 
     drivers = []
-    commands = {'DISCOVER': discover}
+    _commands = {'DISCOVER': discover}
     node_def_id = 'lifxcontrol'
+
 
 class Light(polyglot.Node):
     """
