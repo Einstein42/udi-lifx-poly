@@ -333,8 +333,10 @@ class MultiZone(Light):
                 self.connected = 1
                 self.num_zones = len(self.color)
                 for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
-                    if self.color and self.color[zone]:
+                    try:
                         self.setDriver(driver, self.color[zone][ind])
+                    except (TypeError) as e:
+                        LOGGER.debug('setDriver for color caught an error. color was : {}'.format(self.color or None))
                     self.setDriver('GV4', self.current_zone)
         try:
             self.power = 1 if self.device.get_power() == 65535 else 0
