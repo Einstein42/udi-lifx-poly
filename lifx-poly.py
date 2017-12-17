@@ -130,7 +130,7 @@ class Controller(polyinterface.Controller):
                     else:
                         LOGGER.info('Found Bulb: {}({})'.format(name, address))
                         self.addNode(Light(self, self.address, address, name, mac, ip, label))
-                gid, glabel, gupdatedat = d.get_group_tuple()                        
+                gid, glabel, gupdatedat = d.get_group_tuple()
                 gaddress = glabel.replace("'", "").replace(' ', '').lower()[:12]
                 if not gaddress in self.nodes:
                     LOGGER.info('Found LiFX Group: {}'.format(glabel))
@@ -207,8 +207,8 @@ class Light(polyinterface.Node):
             self.connected = 1
             self.tries = 0
         except (lifxlan.WorkflowException, OSError) as ex:
-            if time.time() - self.lastupdate >= 60:
-                LOGGER.error('During Query, device {} wasn\'t found. Marking as offline'.format(self.name))
+            if time.time() - self.lastupdate >= 120:
+                LOGGER.error('During Query, device {} wasn\'t found for over 120 seconds. Marking as offline'.format(self.name))
                 self.connected = 0
                 self.uptime = 0
             else:
@@ -329,8 +329,8 @@ class MultiZone(Light):
             self.setDriver('ST', self.power)
             self.connected = 1
         except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
-            if time.time() - self.lastupdate >= 60:
-                LOGGER.error('During Query, device mz %s wasn\'t found for over 60 seconds. Marking as offline', self.name)
+            if time.time() - self.lastupdate >= 120:
+                LOGGER.error('During Query, device mz %s wasn\'t found for over 120 seconds. Marking as offline', self.name)
                 self.connected = 0
                 self.uptime = 0
                 self.lastupdate = time.time()
