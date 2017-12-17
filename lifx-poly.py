@@ -197,27 +197,32 @@ class Light(polyinterface.Node):
         self.q.put(lambda: self._update())
 
     def _update(self):
+        self.connected = 0
         try:
-            self.power = 1 if self.device.get_power() == 65535 else 0
             self.color = list(self.device.get_color())
-            self.uptime = self.nanosec_to_hours(self.device.get_uptime())
+        except (lifxlan.WorkflowException, OSError) as ex:
+            LOGGER.error('Connection Error on getting {} bulb color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            self.connected = 1
             for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
                 self.setDriver(driver, self.color[ind])
-            self.setDriver('ST', self.power)
-            self.connected = 1
-            self.tries = 0
+        try:
+            self.power = 1 if self.device.get_power() == 65535 else 0
         except (lifxlan.WorkflowException, OSError) as ex:
-            if time.time() - self.lastupdate >= 120:
-                LOGGER.error('During Query, device {} wasn\'t found for over 120 seconds. Marking as offline'.format(self.name))
-                self.connected = 0
-                self.uptime = 0
-            else:
-                LOGGER.error('Connection Error on color update_info. This happens from time to time, normally safe to ignore. %s', str(ex))
+            LOGGER.error('Connection Error on getting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
-            self.setDriver('GV5', self.connected)
+            self.connected = 1
+            self.setDriver('ST', self.power)
+        try:
+            self.uptime = self.nanosec_to_hours(self.device.get_uptime())
+        except (lifxlan.WorkflowException, OSError) as ex:
+            LOGGER.error('Connection Error on getting {} bulb uptime. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            self.connected = 1
             self.setDriver('GV6', self.uptime)
-            self.setDriver('RR', self.duration)
-            self.lastupdate = time.time()
+        self.setDriver('GV5', self.connected)
+        self.setDriver('RR', self.duration)
+        self.lastupdate = time.time()
 
     def nanosec_to_hours(self, ns):
         return round(ns/(1000000000.0*60*60), 2)
@@ -316,32 +321,37 @@ class MultiZone(Light):
         self.pending = False
 
     def _update(self):
+        self.connected = 0
+        zone = deepcopy(self.current_zone)
+        if self.current_zone != 0: zone -= 1
+        if not self.pending:
+            try:
+                self.color = self.device.get_color_zones()
+            except (lifxlan.WorkflowException, OSError) as ex:
+                LOGGER.error('Connection Error on getting {} multizone color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+            else:
+                self.connected = 1
+                self.num_zones = len(self.color)
+                for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
+                    self.setDriver(driver, self.color[zone][ind])
+                    self.setDriver('GV4', self.current_zone)
         try:
             self.power = 1 if self.device.get_power() == 65535 else 0
-            if not self.pending:
-                self.color = self.device.get_color_zones()
-                self.num_zones = len(self.color)
-            self.uptime = self.nanosec_to_hours(self.device.get_uptime())
-            zone = deepcopy(self.current_zone)
-            if self.current_zone != 0: zone -= 1
-            for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
-                self.setDriver(driver, self.color[zone][ind])
-            self.setDriver('ST', self.power)
-            self.connected = 1
-        except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
-            if time.time() - self.lastupdate >= 120:
-                LOGGER.error('During Query, device mz %s wasn\'t found for over 120 seconds. Marking as offline', self.name)
-                self.connected = 0
-                self.uptime = 0
-                self.lastupdate = time.time()
-            else:
-                LOGGER.error('Connection Error on mz update_info. This happens from time to time, normally safe to ignore. %s', str(ex))
+        except (lifxlan.WorkflowException, OSError) as ex:
+            LOGGER.error('Connection Error on getting {} multizone power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
-            self.setDriver('GV4', self.current_zone)
-            self.setDriver('GV5', self.connected)
+            self.connected = 1
+            self.setDriver('ST', self.power)
+        try:
+            self.uptime = self.nanosec_to_hours(self.device.get_uptime())
+        except (lifxlan.WorkflowException, OSError) as ex:
+            LOGGER.error('Connection Error on getting {} multizone uptime. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            self.connected = 1
             self.setDriver('GV6', self.uptime)
-            self.setDriver('RR', self.duration)
-            self.lastupdate = time.time()
+        self.setDriver('GV5', self.connected)
+        self.setDriver('RR', self.duration)
+        self.lastupdate = time.time()
 
     def query(self, command = None):
         self.q.put(lambda: self.update())
