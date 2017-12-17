@@ -43,18 +43,26 @@ COLORS = {
 }
 
 
-class LogThread(threading.Thread):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._real_run = self.run
-        self.run = self._wrap_run
+class LoggerWriter:
+    def __init__(self, level):
+        # self.level is really like using log.debug(message)
+        # at least in my case
+        self.level = level
 
-    def _wrap_run(self):
-        try:
-            self._real_run()
-        except:
-            e = sys.exc_info()[0]
-            LOGGER.error('Exception during Thread. {}'.format(e))
+    def write(self, message):
+        # if statement reduces the amount of newlines that are
+        # printed to the logger
+        if message != '\n':
+            self.level(message)
+
+    def flush(self):
+        # create a flush method so things can be flushed when
+        # the system wants to. Not sure if simply 'printing'
+        # sys.stderr is the correct way to do it, but it seemed
+        # to work properly for me.
+        self.level(sys.stderr)
+
+sys.stderr = LoggerWriter(LOGGER.error)
 
 def socketLock(f):
     """
@@ -76,7 +84,7 @@ class Controller(polyinterface.Controller):
         self.discovery = False
         self.q = queue.Queue()
         self.lock = threading.Lock()
-        self.thread = LogThread(target = self.processQueue)
+        self.thread = threading.Thread(target = self.processQueue)
         LOGGER.info('Started LiFX Protocol')
 
     def start(self):
@@ -116,20 +124,17 @@ class Controller(polyinterface.Controller):
                 if not address in self.nodes:
                     mac = d.get_mac_addr()
                     ip = d.get_ip_addr()
-                    gid, glabel, gupdatedat = d.get_group_tuple()
                     if d.supports_multizone():
                         LOGGER.info('Found MultiZone Bulb: {}({})'.format(name, address))
                         self.addNode(MultiZone(self, self.address, address, name, mac, ip, label))
-                        time.sleep(2)
                     else:
                         LOGGER.info('Found Bulb: {}({})'.format(name, address))
                         self.addNode(Light(self, self.address, address, name, mac, ip, label))
-                        time.sleep(2)
+                gid, glabel, gupdatedat = d.get_group_tuple()                        
                 gaddress = glabel.replace("'", "").replace(' ', '').lower()[:12]
                 if not gaddress in self.nodes:
                     LOGGER.info('Found LiFX Group: {}'.format(glabel))
                     self.addNode(Group(self, self.address, gaddress, gid, glabel, gupdatedat))
-                    time.sleep(2)
         except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
             LOGGER.error('discovery Error: {}'.format(ex))
         finally:
@@ -148,13 +153,14 @@ class Light(polyinterface.Node):
         self.device = None
         self.mac = mac
         self.ip = ip
+        self.name = name
         self.control = parent
         self.power = False
         self.parent = parent
         self.pending = False
         self.lock = threading.Lock()
         self.q = queue.Queue()
-        self.thread = LogThread(target = self.processQueue)
+        self.thread = threading.Thread(target = self.processQueue)
         self.label = label
         self.connected = 1
         self.mz = False
@@ -171,7 +177,7 @@ class Light(polyinterface.Node):
         self.q.put(lambda: self.update())
 
     def query(self, command = None):
-        self.q.put(lambda: self.update())
+        self.update()
         self.reportDrivers()
 
     def processQueue(self):
@@ -181,7 +187,16 @@ class Light(polyinterface.Node):
                 cmd()
                 self.q.task_done()
 
+    def outQueue(self):
+        while True:
+            cmd = self.outQ.get()
+            cmd()
+            self.outQ.task_done()
+
     def update(self):
+        self.q.put(lambda: self._update())
+
+    def _update(self):
         try:
             self.power = 1 if self.device.get_power() == 65535 else 0
             self.color = list(self.device.get_color())
@@ -300,7 +315,7 @@ class MultiZone(Light):
         self.mz = True
         self.pending = False
 
-    def update(self):
+    def _update(self):
         try:
             self.power = 1 if self.device.get_power() == 65535 else 0
             if not self.pending:
@@ -336,8 +351,8 @@ class MultiZone(Light):
         self.device = lifxlan.MultiZoneLight(self.mac, self.ip)
         self.thread.daemon = True
         self.thread.start()
-        self.q.put(lambda: self.update())
         self.update()
+        #self.update()
 
     def setOn(self, *args, **kwargs):
         try:
@@ -480,13 +495,19 @@ class Group(polyinterface.Node):
 
     def update(self):
         #self.members = list(filter(lambda d: self.parent.nodes[d].group == self.label, self.parent.nodes))
-        self.lifxGroup = self.parent.lifxLan.get_devices_by_group(self.lifxLabel)
+        #self.lifxGroup = self.parent.lifxLan.get_devices_by_group(self.lifxLabel)
         self.numMembers = len(self.lifxGroup.devices)
         self.setDriver('ST', self.numMembers)
 
     def query(self, command = None):
         self.update()
         self.reportDrivers()
+
+    def outQueue(self):
+        while True:
+            cmd = self.outQ.get()
+            cmd()
+            self.outQ.task_done()
 
     def setOn(self, command):
         try:
