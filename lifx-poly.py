@@ -104,6 +104,7 @@ class Controller(polyinterface.Controller):
 
     def longPoll(self):
         for node in self.nodes:
+            time.sleep(.5)
             self.nodes[node].update()
 
     def update(self):
@@ -275,7 +276,7 @@ class Light(polyinterface.Node):
             LOGGER.info('Received manual change, updating the bulb to: {} duration: {}'.format(str(self.color), self.duration))
             if driver:
                 self.setDriver(driver[0], driver[1])
-        else: self.logger.info('Received manual change, however the bulb is in a disconnected state... ignoring')
+        else: LOGGER.info('Received manual change, however the bulb is in a disconnected state... ignoring')
 
     def setHSBKD(self, command):
         query = command.get('query')
