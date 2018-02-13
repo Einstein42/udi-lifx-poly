@@ -71,7 +71,6 @@ target/
 
 #Project Specific
 lifxlan.old/
-profile/
 polyinterface
 test/
 test.py
