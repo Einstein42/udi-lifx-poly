@@ -14,11 +14,11 @@ from copy import deepcopy
 import queue
 import threading
 import json
-import time
 
 LOGGER = polyinterface.LOGGER
 with open('server.json') as data:
     SERVERDATA = json.load(data)
+    data.close()
 try:
     VERSION = SERVERDATA['credits'][0]['version']
 except (KeyError, ValueError):
@@ -103,6 +103,8 @@ class Controller(polyinterface.Controller):
             self.q.task_done()
 
     def longPoll(self):
+        if self.discovery:
+            return
         for node in self.nodes:
             time.sleep(.5)
             self.nodes[node].update()
@@ -112,7 +114,8 @@ class Controller(polyinterface.Controller):
         pass
 
     def discover(self, command = {}):
-        if self.discovery == True: return
+        if self.discovery:
+            return
         self.discovery = True
         LOGGER.info('Starting LiFX Discovery...')
         try:
@@ -149,23 +152,19 @@ class Light(polyinterface.Node):
     """
     LiFX Light Parent Class
     """
-    def __init__(self, parent, primary, address, name, mac, ip, label):
-        super().__init__(parent, primary, address, name)
+    def __init__(self, controller, primary, address, name, mac, ip, label):
+        super().__init__(controller, primary, address, name)
         self.device = None
         self.mac = mac
         self.ip = ip
         self.name = name
-        self.control = parent
         self.power = False
-        self.parent = parent
         self.pending = False
         self.lock = threading.Lock()
         self.q = queue.Queue()
         self.thread = threading.Thread(target = self.processQueue)
         self.label = label
         self.connected = 1
-        self.mz = False
-        self.tries = 0
         self.uptime = 0
         self.color= []
         self.lastupdate = time.time()
@@ -185,14 +184,11 @@ class Light(polyinterface.Node):
         while True:
             with self.lock:
                 cmd = self.q.get()
-                cmd()
+                try:
+                    cmd()
+                except (lifxlan.WorkflowException, OSError) as ex:
+                    LOGGER.error('({}) Connection error, this happens from time to time, normally safe to ignore: {}'.format(self.name, str(ex)))
                 self.q.task_done()
-
-    def outQueue(self):
-        while True:
-            cmd = self.outQ.get()
-            cmd()
-            self.outQ.task_done()
 
     def update(self):
         self.q.put(lambda: self._update())
@@ -228,13 +224,13 @@ class Light(polyinterface.Node):
     def nanosec_to_hours(self, ns):
         return round(ns/(1000000000.0*60*60), 2)
 
-    def setOn(self, *args, **kwargs):
+    def setOn(self, command):
         try:
             self.q.put(lambda: self.device.set_power(True))
             self.setDriver('ST', 1)
         except (lifxlan.WorkflowException): pass
 
-    def setOff(self, *args, **kwargs):
+    def setOff(self, command):
         try:
             self.q.put(lambda: self.device.set_power(False))
             self.setDriver('ST', 0)
@@ -271,7 +267,7 @@ class Light(polyinterface.Node):
                 self.duration = _val
                 driver = ['RR', self.duration]
             try:
-                self.parent.q.put(lambda: self.device.set_color(self.color, self.duration, rapid=False))
+                self.q.put(lambda: self.device.set_color(self.color, self.duration, rapid=False))
             except (lifxlan.WorkflowException, IOError): pass
             LOGGER.info('Received manual change, updating the bulb to: {} duration: {}'.format(str(self.color), self.duration))
             if driver:
@@ -313,12 +309,11 @@ class Light(polyinterface.Node):
                 }
 
 class MultiZone(Light):
-    def __init__(self, parent, primary, address, name, mac, ip, label):
-        super().__init__(parent, primary, address, name, mac, ip, label)
+    def __init__(self, controller, primary, address, name, mac, ip, label):
+        super().__init__(controller, primary, address, name, mac, ip, label)
         self.num_zones = 0
         self.current_zone = 0
         self.new_color = None
-        self.mz = True
         self.pending = False
 
     def _update(self):
@@ -368,13 +363,13 @@ class MultiZone(Light):
         self.update()
         #self.update()
 
-    def setOn(self, *args, **kwargs):
+    def setOn(self, command):
         try:
             self.q.put(lambda: self.device.set_power(True))
             self.setDriver('ST', 1)
         except (lifxlan.WorkflowException): pass
 
-    def setOff(self, *args, **kwargs):
+    def setOff(self, command):
         try:
             self.q.put(lambda: self.device.set_power(False))
             self.setDriver('ST', 0)
@@ -492,36 +487,26 @@ class Group(polyinterface.Node):
     """
     LiFX Group Node Class
     """
-    def __init__(self, parent, primary, address, gid, label, gupdatedat):
+    def __init__(self, controller, primary, address, gid, label, gupdatedat):
         self.label = label.replace("'", "")
-        super().__init__(parent, primary, address, 'LIFX Group ' + str(label))
-        self.parent = parent
-        self.group = gid
+        super().__init__(controller, primary, address, 'LIFX Group ' + str(label))
         self.lifxLabel = label
-        self.updated_at = gupdatedat
-        self.lifxGroup = self.parent.lifxLan.get_devices_by_group(label)
+        self.lifxGroup = self.controller.lifxLan.get_devices_by_group(label)
         self.numMembers = len(self.lifxGroup.devices)
-        self.members = []
 
     def start(self):
         self.update()
         #self.reportDrivers()
 
     def update(self):
-        #self.members = list(filter(lambda d: self.parent.nodes[d].group == self.label, self.parent.nodes))
-        #self.lifxGroup = self.parent.lifxLan.get_devices_by_group(self.lifxLabel)
+        #self.members = list(filter(lambda d: self.controller.nodes[d].group == self.label, self.controller.nodes))
+        #self.lifxGroup = self.controller.lifxLan.get_devices_by_group(self.lifxLabel)
         self.numMembers = len(self.lifxGroup.devices)
         self.setDriver('ST', self.numMembers)
 
     def query(self, command = None):
         self.update()
         self.reportDrivers()
-
-    def outQueue(self):
-        while True:
-            cmd = self.outQ.get()
-            cmd()
-            self.outQ.task_done()
 
     def setOn(self, command):
         try:

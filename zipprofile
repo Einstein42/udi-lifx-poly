@@ -1,6 +1,5 @@
-#!/bin/bash
-rm profile.zip
+#!/bin/sh
+
 cd profile
-zip -r profile.zip *
-mv profile.zip ..
-cd ..
+rm -f ../profile.zip
+zip -r ../profile.zip *
