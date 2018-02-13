@@ -1,8 +1,10 @@
 <nodeDefs>
     <!-- LIFX Control -->
-    <nodeDef id="lifxcontrol" nls="lifx">
+    <nodeDef id="controller" nls="ctl">
         <editors />
-        <sts />
+        <sts>
+            <st id="ST" editor="bool" />
+        </sts>
         <cmds>
             <sends />
             <accepts>
@@ -11,7 +13,7 @@
         </cmds>
     </nodeDef>
     <!-- NODE DEF from 5.0 document http://wiki.universal-devices.com/index.php?title=V50_MAIN -->
-	<!-- LIFX MultiZone Bulb -->
+    <!-- LIFX MultiZone Bulb -->
     <nodeDef id="lifxmultizone" nls="lifxmz">
         <editors />
         <sts>
@@ -19,7 +21,7 @@
             <st id="GV1" editor="lifxclr" />
             <st id="GV2" editor="lifxclr" />
             <st id="GV3" editor="lifxclr" />
-			<st id="GV4" editor="lifxzone" />
+            <st id="GV4" editor="lifxzone" />
             <st id="CLITEMP" editor="lifxkelvin" />
             <st id="RR" editor="lifxduration" />
             <st id="GV5" editor="lifxpower" />
@@ -31,7 +33,7 @@
                 <cmd id="DON" />
                 <cmd id="DOF" />
                 <cmd id="QUERY" />
-				<cmd id="APPLY" />
+                <cmd id="APPLY" />
                 <cmd id="SET_COLOR">
                    <p id="" editor="lifxchoice" />
                 </cmd>
@@ -59,7 +61,7 @@
                     <p id="B" editor="lifxclr" init="GV3" />
                     <p id="K" editor="lifxkelvin" init="CLITEMP" />
                     <p id="D" editor="lifxduration" init="RR" />
-					<p id="Z" editor="lifxzone" init="GV4" />
+                    <p id="Z" editor="lifxzone" init="GV4" />
                 </cmd>
             </accepts>
         </cmds>
@@ -149,13 +151,13 @@
     <nodeDef id="lifxgroup" nls="lifxg">
         <editors />
         <sts>
-			<st id="ST" editor="lifxclr" />
-		</sts>
+            <st id="ST" editor="lifxclr" />
+        </sts>
         <cmds>
             <sends />
             <accepts>
                 <cmd id="DON" />
-				<cmd id="DOF" />
+                <cmd id="DOF" />
                 <cmd id="SET_COLOR">
                    <p id="" editor="lifxchoice" />
                 </cmd>

@@ -1,6 +1,7 @@
 # LIFXControl
-ND-lifxcontrol-NAME = LIFX Control
-CMD-lifx-DISCOVER-NAME = Re-Discover Bulbs
+ND-controller-NAME = LiFX Controller
+CMD-ctl-DISCOVER-NAME = Re-Discover Bulbs
+ST-ctl-ST-NAME = NodeServer Online
 
 # Color Bulbs
 ND-lifxcolor-NAME = LIFX Color Bulb

@@ -1,4 +1,8 @@
 <editors>
+    <!-- Boolean -->
+    <editor id="bool">
+        <range uom="2" subset="0,1" />
+    </editor>
     <!-- LIFX Color Editor -->
     <editor id="lifxclr">
         <range uom="56" min="0" max="65535" prec="0" step="1" />
@@ -26,5 +30,5 @@
     <!-- LIFX Zone Choice Editor -->
     <editor id="lifxzone">
         <range uom="56" min="0" max="80" prec="0" step="1" />
-    </editor>	
+    </editor>
 </editors>
