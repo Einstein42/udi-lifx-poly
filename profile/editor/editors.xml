@@ -13,7 +13,7 @@
     </editor>
     <!-- LIFX Uptime Editor -->
     <editor id="lifxuptime">
-        <range uom="20" prec="1" min="0" max="65535" />
+        <range uom="20" prec="0" min="0" max="65535" />
     </editor>
     <!-- LIFX Duration Editor -->
     <editor id="lifxduration">

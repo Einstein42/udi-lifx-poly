@@ -9,9 +9,9 @@ import polyinterface
 import time
 import sys
 import lifxlan
-from functools import wraps
 from copy import deepcopy
 import json
+from threading import Thread
 
 LOGGER = polyinterface.LOGGER
 with open('server.json') as data:
@@ -40,26 +40,26 @@ COLORS = {
 }
 
 
-class LoggerWriter:
-    def __init__(self, level):
-        # self.level is really like using log.debug(message)
-        # at least in my case
-        self.level = level
-
-    def write(self, message):
-        # if statement reduces the amount of newlines that are
-        # printed to the logger
-        if message != '\n':
-            self.level(message)
-
-    def flush(self):
-        # create a flush method so things can be flushed when
-        # the system wants to. Not sure if simply 'printing'
-        # sys.stderr is the correct way to do it, but it seemed
-        # to work properly for me.
-        self.level(sys.stderr)
-
-sys.stderr = LoggerWriter(LOGGER.error)
+#class LoggerWriter:
+#    def __init__(self, level):
+#        # self.level is really like using log.debug(message)
+#        # at least in my case
+#        self.level = level
+#
+#    def write(self, message):
+#        # if statement reduces the amount of newlines that are
+#        # printed to the logger
+#        if message != '\n':
+#            self.level(message)
+#
+#    def flush(self):
+#        # create a flush method so things can be flushed when
+#        # the system wants to. Not sure if simply 'printing'
+#        # sys.stderr is the correct way to do it, but it seemed
+#        # to work properly for me.
+#        self.level(sys.stderr)
+#
+#sys.stderr = LoggerWriter(LOGGER.error)
 
 
 class Controller(polyinterface.Controller):
@@ -68,6 +68,7 @@ class Controller(polyinterface.Controller):
         self.lifxLan = None
         self.name = 'LiFX Controller'
         self.discovery = False
+        self.discovery_thread = None
 
     def start(self):
         self.lifxLan = lifxlan.LifxLAN()
@@ -85,10 +86,20 @@ class Controller(polyinterface.Controller):
         pass
 
     def discover(self, command=None):
+        if self.discovery_thread is not None:
+            if self.discovery_thread.isAlive():
+                LOGGER.info('Discovery is still in progress')
+                return
+            else:
+                self.discovery = False
+        self.discovery_thread = Thread(target=self._discovery_process())
+        self.discovery_thread.start()
+
+    def _discovery_process(self):
         if self.discovery:
             return
         self.discovery = True
-        LOGGER.info('Starting LiFX Discovery...')
+        LOGGER.info('Starting LiFX Discovery thread...')
         try:
             devices = self.lifxLan.get_lights()
             LOGGER.info('{} bulbs found. Checking status and adding to ISY if necessary.'.format(len(devices)))
@@ -113,7 +124,7 @@ class Controller(polyinterface.Controller):
         except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
             LOGGER.error('discovery Error: {}'.format(ex))
         self.discovery = False
-        LOGGER.info('LiFX Discovery Complete.')
+        LOGGER.info('LiFX Discovery thread is complete.')
 
     commands = {'DISCOVER': discover}
 
@@ -177,7 +188,7 @@ class Light(polyinterface.Node):
         self.lastupdate = time.time()
 
     def nanosec_to_hours(self, ns):
-        return round(ns/(1000000000.0*60*60), 2)
+        return int(round(ns/(1000000000.0*60*60)))
 
     def setOn(self, command):
         try:
