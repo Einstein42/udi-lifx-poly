@@ -11,8 +11,6 @@ import sys
 import lifxlan
 from functools import wraps
 from copy import deepcopy
-import queue
-import threading
 import json
 
 LOGGER = polyinterface.LOGGER
@@ -24,7 +22,6 @@ try:
 except (KeyError, ValueError):
     LOGGER.info('Version not found in server.json.')
     VERSION = '0.0.0'
-_SLOCK = threading.Lock()
 
 # Changing these will not update the ISY names and labels, you will have to edit the profile.
 COLORS = {
@@ -64,56 +61,30 @@ class LoggerWriter:
 
 sys.stderr = LoggerWriter(LOGGER.error)
 
-def socketLock(f):
-    """
-    Python Decorator to check global Socket Lock on LiFX mechanism. This prevents
-    simultaneous use of the socket, which caused instability on the previous release.
-    """
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        with _SLOCK:
-            result = f(*args, **kwargs)
-        return result
-    return wrapper
 
 class Controller(polyinterface.Controller):
-    def __init__(self, poly):
-        super().__init__(poly)
-        self.lifxLan = lifxlan.LifxLAN(None)
+    def __init__(self, polyglot):
+        super().__init__(polyglot)
+        self.lifxLan = None
         self.name = 'LiFX Controller'
         self.discovery = False
-        self.q = queue.Queue()
-        self.lock = threading.Lock()
-        self.thread = threading.Thread(target = self.processQueue)
-        LOGGER.info('Started LiFX Protocol')
 
     def start(self):
+        self.lifxLan = lifxlan.LifxLAN()
         LOGGER.info('Starting LiFX Polyglot v2 NodeServer version {}'.format(VERSION))
-        self.thread.daemon = True
-        self.thread.start()
-        self.q.put(lambda: self.discover())
-        #self.discover()
-        #self.processQueue()
-
-    def processQueue(self):
-        while True:
-            with self.lock:
-                cmd = self.q.get()
-                cmd()
-            self.q.task_done()
+        self.discover()
 
     def longPoll(self):
         if self.discovery:
             return
         for node in self.nodes:
-            time.sleep(.5)
             self.nodes[node].update()
 
     def update(self):
         """ Nothing to update for controller node. """
         pass
 
-    def discover(self, command = {}):
+    def discover(self, command=None):
         if self.discovery:
             return
         self.discovery = True
@@ -141,9 +112,8 @@ class Controller(polyinterface.Controller):
                     self.addNode(Group(self, self.address, gaddress, gid, glabel, gupdatedat))
         except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
             LOGGER.error('discovery Error: {}'.format(ex))
-        finally:
-            self.discovery = False
-            LOGGER.info('LiFX Discovery Complete.')
+        self.discovery = False
+        LOGGER.info('LiFX Discovery Complete.')
 
     commands = {'DISCOVER': discover}
 
@@ -159,10 +129,6 @@ class Light(polyinterface.Node):
         self.ip = ip
         self.name = name
         self.power = False
-        self.pending = False
-        self.lock = threading.Lock()
-        self.q = queue.Queue()
-        self.thread = threading.Thread(target = self.processQueue)
         self.label = label
         self.connected = 1
         self.uptime = 0
@@ -172,28 +138,17 @@ class Light(polyinterface.Node):
 
     def start(self):
         self.device = lifxlan.Light(self.mac, self.ip)
-        self.thread.daemon = True
-        self.thread.start()
-        self.q.put(lambda: self.update())
+        try:
+            self.duration = int(self.getDriver('RR'))
+        except:
+            self.duration = 0
+        self.update()
 
     def query(self, command = None):
         self.update()
         self.reportDrivers()
 
-    def processQueue(self):
-        while True:
-            with self.lock:
-                cmd = self.q.get()
-                try:
-                    cmd()
-                except (lifxlan.WorkflowException, OSError) as ex:
-                    LOGGER.error('({}) Connection error, this happens from time to time, normally safe to ignore: {}'.format(self.name, str(ex)))
-                self.q.task_done()
-
     def update(self):
-        self.q.put(lambda: self._update())
-
-    def _update(self):
         self.connected = 0
         try:
             self.color = list(self.device.get_color())
@@ -226,26 +181,30 @@ class Light(polyinterface.Node):
 
     def setOn(self, command):
         try:
-            self.q.put(lambda: self.device.set_power(True))
+            self.device.set_power(True)
             self.setDriver('ST', 1)
-        except (lifxlan.WorkflowException): pass
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error on setting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
 
     def setOff(self, command):
         try:
-            self.q.put(lambda: self.device.set_power(False))
+            self.device.set_power(False)
             self.setDriver('ST', 0)
-        except (lifxlan.WorkflowException): pass
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error on setting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
 
     def setColor(self, command):
         if self.connected:
             _color = int(command.get('value'))
             try:
-                self.q.put(lambda: self.device.set_color(COLORS[_color][1], duration=self.duration, rapid=False))
-            except (lifxlan.WorkflowException, IOError): pass
+                self.device.set_color(COLORS[_color][1], duration=self.duration, rapid=False)
+            except lifxlan.WorkflowException as ex:
+                LOGGER.error('Connection Error on setting {} bulb color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
             LOGGER.info('Received SetColor command from ISY. Changing color to: {}'.format(COLORS[_color][0]))
             for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
                 self.setDriver(driver, COLORS[_color][1][ind])
-        else: LOGGER.error('Received SetColor, however the bulb is in a disconnected state... ignoring')
+        else:
+            LOGGER.error('Received SetColor, however the bulb is in a disconnected state... ignoring')
 
     def setManual(self, command):
         if self.connected:
@@ -267,8 +226,9 @@ class Light(polyinterface.Node):
                 self.duration = _val
                 driver = ['RR', self.duration]
             try:
-                self.q.put(lambda: self.device.set_color(self.color, self.duration, rapid=False))
-            except (lifxlan.WorkflowException, IOError): pass
+                self.device.set_color(self.color, self.duration, rapid=False)
+            except lifxlan.WorkflowException as ex:
+                LOGGER.error('Connection Error on setting {} bulb {}. This happens from time to time, normally safe to ignore. {}'.format(self.name, _cmd, str(ex)))
             LOGGER.info('Received manual change, updating the bulb to: {} duration: {}'.format(str(self.color), self.duration))
             if driver:
                 self.setDriver(driver[0], driver[1])
@@ -283,8 +243,9 @@ class Light(polyinterface.Node):
         except TypeError:
             self.duration = 0
         try:
-            self.q.put(lambda: self.device.set_color(self.color, duration=self.duration, rapid=False))
-        except (lifxlan.WorkflowException, IOError): pass
+            self.device.set_color(self.color, duration=self.duration, rapid=False)
+        except lifxlan.WorkflowException as ex:
+                LOGGER.error('Connection Error on setting {} bulb color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
             self.setDriver(driver, self.color[ind])
         self.setDriver('RR', self.duration)
@@ -316,7 +277,7 @@ class MultiZone(Light):
         self.new_color = None
         self.pending = False
 
-    def _update(self):
+    def update(self):
         self.connected = 0
         zone = deepcopy(self.current_zone)
         if self.current_zone != 0: zone -= 1
@@ -353,35 +314,35 @@ class MultiZone(Light):
         self.lastupdate = time.time()
 
     def query(self, command = None):
-        self.q.put(lambda: self.update())
+        self.update()
         self.reportDrivers()
 
     def start(self):
         self.device = lifxlan.MultiZoneLight(self.mac, self.ip)
-        self.thread.daemon = True
-        self.thread.start()
         self.update()
-        #self.update()
 
     def setOn(self, command):
         try:
-            self.q.put(lambda: self.device.set_power(True))
+            self.device.set_power(True)
             self.setDriver('ST', 1)
-        except (lifxlan.WorkflowException): pass
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error on setting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
 
     def setOff(self, command):
         try:
-            self.q.put(lambda: self.device.set_power(False))
+            self.device.set_power(False)
             self.setDriver('ST', 0)
-        except (lifxlan.WorkflowException): pass
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error on setting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
 
     def apply(self, command):
         try:
             if self.new_color:
                 self.color = deepcopy(self.new_color)
                 self.new_color = None
-            self.q.put(lambda: self.device.set_zone_colors(self.color, self.duration, rapid=True))
-        except (lifxlan.WorkflowException, IOError): pass
+            self.device.set_zone_colors(self.color, self.duration, rapid=True)
+        except (lifxlan.WorkflowException, IOError) as ex:
+            LOGGER.error('Connection Error on setting {} bulb color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         LOGGER.info('Received apply command for {}'.format(self.address))
         self.pending = False
 
@@ -392,9 +353,9 @@ class MultiZone(Light):
                 zone = deepcopy(self.current_zone)
                 if self.current_zone != 0: zone -= 1
                 if self.current_zone == 0:
-                    self.q.put(lambda: self.device.set_zone_color(self.current_zone, self.num_zones, COLORS[_color][1], self.duration, True))
+                    self.device.set_zone_color(self.current_zone, self.num_zones, COLORS[_color][1], self.duration, True)
                 else:
-                    self.q.put(lambda: self.device.set_zone_color(zone, zone, COLORS[_color][1], self.duration, True))
+                    self.device.set_zone_color(zone, zone, COLORS[_color][1], self.duration, True)
                 LOGGER.info('Received SetColor command from ISY. Changing {} color to: {}'.format(self.address, COLORS[_color][0]))
             except (lifxlan.WorkflowException, IOError) as ex:
                 LOGGER.error('mz setcolor error {}'.format(str(ex)))
@@ -431,9 +392,9 @@ class MultiZone(Light):
                     driver = ['RR', self.duration]
                 self.color[zone] = new_color
                 if self.current_zone == 0:
-                    self.q.put(lambda: self.device.set_zone_color(0, self.num_zones, new_color, self.duration, rapid=False))
+                    self.device.set_zone_color(0, self.num_zones, new_color, self.duration, rapid=False)
                 else:
-                    self.q.put(lambda: self.device.set_zone_color(zone, zone, new_color, self.duration, rapid=False))
+                    self.device.set_zone_color(zone, zone, new_color, self.duration, rapid=False)
             except (lifxlan.WorkflowException, TypeError) as ex:
                 LOGGER.error('setmanual mz error {}'.format(ex))
             LOGGER.info('Received manual change, updating the mz bulb zone {} to: {} duration: {}'.format(zone, new_color, self.duration))
@@ -456,9 +417,9 @@ class MultiZone(Light):
             self.duration = 0
         try:
             if current_zone == 0:
-                self.q.put(lambda: self.device.set_zone_color(zone, self.num_zones, self.new_color, self.duration, rapid=False))
+                self.device.set_zone_color(zone, self.num_zones, self.new_color, self.duration, rapid=False)
             else:
-                self.q.put(lambda: self.device.set_zone_color(zone, zone, self.new_color, self.duration, rapid=False, apply = 0))
+                self.device.set_zone_color(zone, zone, self.new_color, self.duration, rapid=False, apply = 0)
         except (lifxlan.WorkflowException, IOError) as ex:
             LOGGER.error('set mz hsbkdz error %s', str(ex))
 
@@ -499,8 +460,6 @@ class Group(polyinterface.Node):
         #self.reportDrivers()
 
     def update(self):
-        #self.members = list(filter(lambda d: self.controller.nodes[d].group == self.label, self.controller.nodes))
-        #self.lifxGroup = self.controller.lifxLan.get_devices_by_group(self.lifxLabel)
         self.numMembers = len(self.lifxGroup.devices)
         self.setDriver('ST', self.numMembers)
 
