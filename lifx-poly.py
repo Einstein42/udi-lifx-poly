@@ -71,9 +71,10 @@ class Controller(polyinterface.Controller):
         self.discovery_thread = None
 
     def start(self):
-        self.lifxLan = lifxlan.LifxLAN()
         LOGGER.info('Starting LiFX Polyglot v2 NodeServer version {}'.format(VERSION))
+        self.lifxLan = lifxlan.LifxLAN()
         self.discover()
+        LOGGER.debug('Start complete')
 
     def longPoll(self):
         if self.discovery:
@@ -92,7 +93,7 @@ class Controller(polyinterface.Controller):
                 return
             else:
                 self.discovery = False
-        self.discovery_thread = Thread(target=self._discovery_process())
+        self.discovery_thread = Thread(target=self._discovery_process)
         self.discovery_thread.start()
 
     def _discovery_process(self):
