@@ -9,6 +9,8 @@
             <sends />
             <accepts>
                 <cmd id="DISCOVER" />
+                <cmd id="DON" />
+                <cmd id="DOF" />
             </accepts>
         </cmds>
     </nodeDef>
@@ -17,14 +19,14 @@
     <nodeDef id="lifxmultizone" nls="lifxmz">
         <editors />
         <sts>
-            <st id="ST" editor="lifxpower" />
+            <st id="ST" editor="lifxst" />
             <st id="GV1" editor="lifxclr" />
             <st id="GV2" editor="lifxclr" />
             <st id="GV3" editor="lifxclr" />
             <st id="GV4" editor="lifxzone" />
             <st id="CLITEMP" editor="lifxkelvin" />
             <st id="RR" editor="lifxduration" />
-            <st id="GV5" editor="lifxpower" />
+            <st id="GV5" editor="bool" />
             <st id="GV6" editor="lifxuptime" />
         </sts>
         <cmds>
@@ -32,6 +34,13 @@
             <accepts>
                 <cmd id="DON" />
                 <cmd id="DOF" />
+                <cmd id="DFON" />
+                <cmd id="DFOF" />
+                <cmd id="BRT" />
+                <cmd id="DIM" />
+                <cmd id="FDUP" />
+                <cmd id="FDDOWN" />
+                <cmd id="FDSTOP" />
                 <cmd id="QUERY" />
                 <cmd id="APPLY" />
                 <cmd id="SET_COLOR">
@@ -46,10 +55,10 @@
                 <cmd id="SETB">
                     <p id="" editor="lifxclr" init="GV3" />
                 </cmd>
-                <cmd id="SETK">
+                <cmd id="CLITEMP">
                     <p id="" editor="lifxkelvin" init="CLITEMP" />
                 </cmd>
-                <cmd id="SETD">
+                <cmd id="RR">
                     <p id="" editor="lifxduration" init="RR" />
                 </cmd>
                 <cmd id="SETZ">
@@ -70,13 +79,13 @@
     <nodeDef id="lifxcolor" nls="lifxc">
         <editors />
         <sts>
-            <st id="ST" editor="lifxpower" />
+            <st id="ST" editor="lifxst" />
             <st id="GV1" editor="lifxclr" />
             <st id="GV2" editor="lifxclr" />
             <st id="GV3" editor="lifxclr" />
             <st id="CLITEMP" editor="lifxkelvin" />
             <st id="RR" editor="lifxduration" />
-            <st id="GV5" editor="lifxpower" />
+            <st id="GV5" editor="bool" />
             <st id="GV6" editor="lifxuptime" />
         </sts>
         <cmds>
@@ -84,6 +93,13 @@
             <accepts>
                 <cmd id="DON" />
                 <cmd id="DOF" />
+                <cmd id="DFON" />
+                <cmd id="DFOF" />
+                <cmd id="BRT" />
+                <cmd id="DIM" />
+                <cmd id="FDUP" />
+                <cmd id="FDDOWN" />
+                <cmd id="FDSTOP" />
                 <cmd id="QUERY" />
                 <cmd id="SET_COLOR">
                    <p id="" editor="lifxchoice" />
@@ -97,10 +113,10 @@
                 <cmd id="SETB">
                     <p id="" editor="lifxclr" init="GV3"/>
                 </cmd>
-                <cmd id="SETK">
+                <cmd id="CLITEMP">
                     <p id="" editor="lifxkelvin" init="CLITEMP"/>
                 </cmd>
-                <cmd id="SETD">
+                <cmd id="RR">
                     <p id="" editor="lifxduration" init="RR"/>
                 </cmd>
                 <cmd id="SET_HSBKD">
@@ -117,11 +133,11 @@
     <nodeDef id="lifxwhite" nls="lifxw">
         <editors />
         <sts>
-            <st id="ST" editor="lifxpower" />
+            <st id="ST" editor="bool" />
             <st id="GV3" editor="lifxclr" />
             <st id="CLITEMP" editor="lifxkelvin" />
             <st id="RR" editor="lifxduration" />
-            <st id="GV5" editor="lifxpower" />
+            <st id="GV5" editor="bool" />
             <st id="GV6" editor="lifxuptime" />
         </sts>
         <cmds>
@@ -129,14 +145,21 @@
             <accepts>
                 <cmd id="DON" />
                 <cmd id="DOF" />
+                <cmd id="DFON" />
+                <cmd id="DFOF" />
+                <cmd id="BRT" />
+                <cmd id="DIM" />
+                <cmd id="FDUP" />
+                <cmd id="FDDOWN" />
+                <cmd id="FDSTOP" />
                 <cmd id="QUERY" />
                 <cmd id="SETB">
                     <p id="" editor="lifxclr" init="GV3"/>
                 </cmd>
-                <cmd id="SETK">
+                <cmd id="CLITEMP">
                     <p id="" editor="lifxkelvin" init="CLITEMP"/>
                 </cmd>
-                <cmd id="SETD">
+                <cmd id="RR">
                     <p id="" editor="lifxduration" init="RR"/>
                 </cmd>
                 <cmd id="SET_HSBKD">

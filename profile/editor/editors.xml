@@ -9,7 +9,7 @@
     </editor>
     <!-- LIFX Kelvin Editor -->
     <editor id="lifxkelvin">
-        <range uom="26" min="0" max="65535" prec="0" step="1" />
+        <range uom="26" min="2500" max="9000" prec="0" step="1" />
     </editor>
     <!-- LIFX Uptime Editor -->
     <editor id="lifxuptime">
@@ -17,11 +17,7 @@
     </editor>
     <!-- LIFX Duration Editor -->
     <editor id="lifxduration">
-        <range uom="42" min="0" max="65535" prec="0" step="1" />
-    </editor>
-    <!-- LIFX Status/Power Editor -->
-    <editor id="lifxpower">
-        <range uom="25" subset="0,1" nls="LIFXPOWER" />
+        <range uom="42" min="0" max="540000" prec="0" step="1" />
     </editor>
     <!-- LIFX Color Choice Editor -->
     <editor id="lifxchoice">
@@ -30,5 +26,9 @@
     <!-- LIFX Zone Choice Editor -->
     <editor id="lifxzone">
         <range uom="56" min="0" max="80" prec="0" step="1" />
+    </editor>
+    <!-- LIFX Status Editor -->
+    <editor id="lifxst">
+        <range uom="51" min="0" max="100" prec="4" />
     </editor>
 </editors>

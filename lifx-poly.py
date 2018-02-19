@@ -13,7 +13,14 @@ from copy import deepcopy
 import json
 from threading import Thread
 
+
 LOGGER = polyinterface.LOGGER
+BR_INCREMENT = 2620    # this is ~4% of 65535
+BR_MIN = 1310          # minimum brightness value ~2%
+BR_MAX = 65535         # maximum brightness value
+FADE_INTERVAL = 5000   # 5s
+BRTDIM_INTERVAL = 400  # 400ms
+
 with open('server.json') as data:
     SERVERDATA = json.load(data)
     data.close()
@@ -22,6 +29,7 @@ try:
 except (KeyError, ValueError):
     LOGGER.info('Version not found in server.json.')
     VERSION = '0.0.0'
+
 
 # Changing these will not update the ISY names and labels, you will have to edit the profile.
 COLORS = {
@@ -40,28 +48,6 @@ COLORS = {
 }
 
 
-#class LoggerWriter:
-#    def __init__(self, level):
-#        # self.level is really like using log.debug(message)
-#        # at least in my case
-#        self.level = level
-#
-#    def write(self, message):
-#        # if statement reduces the amount of newlines that are
-#        # printed to the logger
-#        if message != '\n':
-#            self.level(message)
-#
-#    def flush(self):
-#        # create a flush method so things can be flushed when
-#        # the system wants to. Not sure if simply 'printing'
-#        # sys.stderr is the correct way to do it, but it seemed
-#        # to work properly for me.
-#        self.level(sys.stderr)
-#
-#sys.stderr = LoggerWriter(LOGGER.error)
-
-
 class Controller(polyinterface.Controller):
     def __init__(self, polyglot):
         super().__init__(polyglot)
@@ -76,14 +62,22 @@ class Controller(polyinterface.Controller):
         self.discover()
         LOGGER.debug('Start complete')
 
-    def longPoll(self):
+    def shortPoll(self):
         if self.discovery:
             return
         for node in self.nodes:
             self.nodes[node].update()
 
+    def longPoll(self):
+        if self.discovery:
+            return
+        for node in self.nodes:
+            self.nodes[node].long_update()
+
     def update(self):
-        """ Nothing to update for controller node. """
+        pass
+
+    def long_update(self):
         pass
 
     def discover(self, command=None):
@@ -127,7 +121,19 @@ class Controller(polyinterface.Controller):
         self.discovery = False
         LOGGER.info('LiFX Discovery thread is complete.')
 
-    commands = {'DISCOVER': discover}
+    def all_on(self, command):
+        try:
+            self.lifxLan.set_power_all_lights("on", rapid=True)
+        except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
+            LOGGER.error('All On Error: {}'.format(ex))
+
+    def all_off(self, command):
+        try:
+            self.lifxLan.set_power_all_lights("off", rapid=True)
+        except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
+            LOGGER.error('All Off Error: {}'.format(ex))
+
+    commands = {'DISCOVER': discover, 'DON': all_on, 'DOF': all_off}
 
 
 class Light(polyinterface.Node):
@@ -155,55 +161,192 @@ class Light(polyinterface.Node):
         except:
             self.duration = 0
         self.update()
+        self.long_update()
 
     def query(self, command = None):
         self.update()
+        self.long_update()
         self.reportDrivers()
 
     def update(self):
-        self.connected = 0
+        connected = 0
         try:
             self.color = list(self.device.get_color())
         except (lifxlan.WorkflowException, OSError) as ex:
             LOGGER.error('Connection Error on getting {} bulb color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
-            self.connected = 1
+            connected = 1
             for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
                 self.setDriver(driver, self.color[ind])
         try:
-            self.power = 1 if self.device.get_power() == 65535 else 0
+            self.power = True if self.device.get_power() == 65535 else False
         except (lifxlan.WorkflowException, OSError) as ex:
             LOGGER.error('Connection Error on getting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
-            self.connected = 1
-            self.setDriver('ST', self.power)
-        try:
-            self.uptime = self.nanosec_to_hours(self.device.get_uptime())
-        except (lifxlan.WorkflowException, OSError) as ex:
-            LOGGER.error('Connection Error on getting {} bulb uptime. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
-        else:
-            self.connected = 1
-            self.setDriver('GV6', self.uptime)
+            connected = 1
+            if self.power:
+                self.setDriver('ST', self._bri_to_percent(self.color[2]))
+            else:
+                self.setDriver('ST', 0)
+        self.connected = connected
         self.setDriver('GV5', self.connected)
         self.setDriver('RR', self.duration)
         self.lastupdate = time.time()
 
-    def nanosec_to_hours(self, ns):
+    def long_update(self):
+        connected = 0
+        try:
+            self.uptime = self._nanosec_to_hours(self.device.get_uptime())
+        except (lifxlan.WorkflowException, OSError) as ex:
+            LOGGER.error('Connection Error on getting {} bulb uptime. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            connected = 1
+            self.setDriver('GV6', self.uptime)
+        self.connected = connected
+        self.setDriver('GV5', self.connected)
+        self.lastupdate = time.time()
+
+    def _nanosec_to_hours(self, ns):
         return int(round(ns/(1000000000.0*60*60)))
 
+    def _bri_to_percent(self, bri):
+        return float(round(bri*100/65535, 4))
+
     def setOn(self, command):
+        cmd = command.get('cmd')
+        val = command.get('value')
+        new_bri = None
+        if cmd == 'DFON' and self.color[2] != BR_MAX:
+            new_bri = BR_MAX
+            trans = 0
+        elif cmd == 'DON' and val is not None:
+            new_bri = int(round(int(val)*65535/255))
+            if new_bri > BR_MAX:
+                new_bri = BR_MAX
+            elif new_bri < BR_MIN:
+                new_bri = BR_MIN
+            trans = self.duration
+        elif self.power and self.color[2] != BR_MAX:
+            new_bri = BR_MAX
+            trans = self.duration
+        if new_bri is not None:
+            self.color[2] = new_bri
+            try:
+                self.device.set_color(self.color, trans, rapid=False)
+            except lifxlan.WorkflowException as ex:
+                LOGGER.error('Connection Error DON {} bulb. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+            else:
+                self.setDriver('GV3', self.color[2])
         try:
             self.device.set_power(True)
-            self.setDriver('ST', 1)
         except lifxlan.WorkflowException as ex:
             LOGGER.error('Connection Error on setting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            self.power = True
+            self.setDriver('ST', self._bri_to_percent(self.color[2]))
 
     def setOff(self, command):
         try:
             self.device.set_power(False)
-            self.setDriver('ST', 0)
         except lifxlan.WorkflowException as ex:
             LOGGER.error('Connection Error on setting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            self.power = False
+            self.setDriver('ST', 0)
+
+    def dim(self, command):
+        if self.power is False:
+            LOGGER.info('{} is off, ignoring DIM'.format(self.name))
+        new_bri = self.color[2] - BR_INCREMENT
+        if new_bri < BR_MIN:
+            new_bri = BR_MIN
+        self.color[2] = new_bri
+        try:
+            self.device.set_color(self.color, BRTDIM_INTERVAL, rapid=False)
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error on dimming {} bulb. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            self.setDriver('ST', self._bri_to_percent(self.color[2]))
+            self.setDriver('GV3', self.color[2])
+
+    def brighten(self, command):
+        if self.power is False:
+            # Bulb is currently off, let's turn it on ~2%
+            self.color[2] = BR_MIN
+            try:
+                self.device.set_color(self.color, 0, rapid=False)
+                self.device.set_power(True)
+            except lifxlan.WorkflowException as ex:
+                LOGGER.error('Connection Error on brightnening {} bulb. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+            else:
+                self.power = True
+                self.setDriver('ST', self._bri_to_percent(self.color[2]))
+            return
+        new_bri = self.color[2] + BR_INCREMENT
+        if new_bri > BR_MAX:
+            new_bri = BR_MAX
+        self.color[2] = new_bri
+        try:
+            self.device.set_color(self.color, BRTDIM_INTERVAL, rapid=False)
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error on dimming {} bulb. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            self.setDriver('ST', self._bri_to_percent(self.color[2]))
+            self.setDriver('GV3', self.color[2])
+
+    def fade_up(self, command):
+        if self.power is False:
+            # Bulb is currently off, let's turn it on ~2%
+            self.color[2] = BR_MIN
+            try:
+                self.device.set_color(self.color, 0, rapid=False)
+                self.device.set_power(True)
+            except lifxlan.WorkflowException as ex:
+                LOGGER.error('Connection Error on brightnening {} bulb. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+            else:
+                self.power = True
+                self.setDriver('ST', self._bri_to_percent(self.color[2]))
+        if self.color[2] == BR_MAX:
+            LOGGER.info('{} Can not FadeUp, already at maximum'.format(self.name))
+            return
+        self.color[2] = BR_MAX
+        try:
+            self.device.set_color(self.color, FADE_INTERVAL, rapid=False)
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error {} bulb Fade Up. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+
+    def fade_down(self, command):
+        if self.power is False:
+            LOGGER.error('{} can not FadeDown as it is currently off'.format(self.name))
+            return
+        if self.color[2] <= BR_MIN:
+            LOGGER.error('{} can not FadeDown as it is currently at minimum'.format(self.name))
+            return
+        self.color[2] = BR_MIN
+        try:
+            self.device.set_color(self.color, FADE_INTERVAL, rapid=False)
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error {} bulb Fade Down. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+
+    def fade_stop(self, command):
+        if self.power is False:
+            LOGGER.error('{} can not FadeStop as it is currently off'.format(self.name))
+            return
+        # check current brightness level
+        try:
+            self.color = list(self.device.get_color())
+        except (lifxlan.WorkflowException, OSError) as ex:
+            LOGGER.error('Connection Error on getting {} bulb color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
+                self.setDriver(driver, self.color[ind])
+        if self.color[2] == BR_MIN or self.color[2] == BR_MAX:
+            LOGGER.error('{} can not FadeStop as it is currently at limit'.format(self.name))
+            return
+        try:
+            self.device.set_color(self.color, 0, rapid=False)
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error {} bulb Fade Stop. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
 
     def setColor(self, command):
         if self.connected:
@@ -231,10 +374,10 @@ class Light(polyinterface.Node):
             elif _cmd == 'SETB':
                 self.color[2] = _val
                 driver = ['GV3', self.color[2]]
-            elif _cmd == 'SETK':
+            elif _cmd == 'CLITEMP':
                 self.color[3] = _val
                 driver = ['CLITEMP', self.color[3]]
-            elif _cmd == 'SETD':
+            elif _cmd == 'RR':
                 self.duration = _val
                 driver = ['RR', self.duration]
             try:
@@ -262,12 +405,12 @@ class Light(polyinterface.Node):
             self.setDriver(driver, self.color[ind])
         self.setDriver('RR', self.duration)
 
-    drivers = [{'driver': 'ST', 'value': 0, 'uom': 25},
+    drivers = [{'driver': 'ST', 'value': 0, 'uom': 51},
                 {'driver': 'GV1', 'value': 0, 'uom': 56},
                 {'driver': 'GV2', 'value': 0, 'uom': 56},
                 {'driver': 'GV3', 'value': 0, 'uom': 56},
                 {'driver': 'CLITEMP', 'value': 0, 'uom': 26},
-                {'driver': 'GV5', 'value': 0, 'uom': 25},
+                {'driver': 'GV5', 'value': 0, 'uom': 2},
                 {'driver': 'GV6', 'value': 0, 'uom': 20},
                 {'driver': 'RR', 'value': 0, 'uom': 42}]
 
@@ -277,8 +420,11 @@ class Light(polyinterface.Node):
                     'DON': setOn, 'DOF': setOff, 'QUERY': query,
                     'SET_COLOR': setColor, 'SETH': setManual,
                     'SETS': setManual, 'SETB': setManual,
-                    'SETK': setManual, 'SETK': setManual,
-                    'SETD': setManual, 'SET_HSBKD': setHSBKD
+                    'CLITEMP': setManual,
+                    'RR': setManual, 'SET_HSBKD': setHSBKD,
+                    'BRT': brighten, 'DIM': dim, 'FDUP': fade_up,
+                    'FDDOWN': fade_down, 'FDSTOP': fade_stop,
+                    'DFON': setOn, 'DFOF': setOff
                 }
 
 class MultiZone(Light):
@@ -290,7 +436,7 @@ class MultiZone(Light):
         self.pending = False
 
     def update(self):
-        self.connected = 0
+        connected = 0
         zone = deepcopy(self.current_zone)
         if self.current_zone != 0: zone -= 1
         if not self.pending:
@@ -299,7 +445,7 @@ class MultiZone(Light):
             except (lifxlan.WorkflowException, OSError) as ex:
                 LOGGER.error('Connection Error on getting {} multizone color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
             else:
-                self.connected = 1
+                connected = 1
                 self.num_zones = len(self.color)
                 for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
                     try:
@@ -312,40 +458,193 @@ class MultiZone(Light):
         except (lifxlan.WorkflowException, OSError) as ex:
             LOGGER.error('Connection Error on getting {} multizone power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
-            self.connected = 1
-            self.setDriver('ST', self.power)
-        try:
-            self.uptime = self.nanosec_to_hours(self.device.get_uptime())
-        except (lifxlan.WorkflowException, OSError) as ex:
-            LOGGER.error('Connection Error on getting {} multizone uptime. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
-        else:
-            self.connected = 1
-            self.setDriver('GV6', self.uptime)
+            connected = 1
+            self.setDriver('ST', self._bri_to_percent(self.color[zone][2]))
+        self.connected = connected
         self.setDriver('GV5', self.connected)
         self.setDriver('RR', self.duration)
         self.lastupdate = time.time()
 
-    def query(self, command = None):
-        self.update()
-        self.reportDrivers()
-
     def start(self):
         self.device = lifxlan.MultiZoneLight(self.mac, self.ip)
+        try:
+            self.duration = int(self.getDriver('RR'))
+        except:
+            self.duration = 0
+        try:
+            self.current_zone = int(self.getDriver('GV4'))
+        except:
+            self.current_zone = 0
         self.update()
+        self.long_update()
 
     def setOn(self, command):
+        zone = deepcopy(self.current_zone)
+        if self.current_zone != 0: zone -= 1
+        cmd = command.get('cmd')
+        val = command.get('value')
+        new_bri = None
+        if cmd == 'DFON' and self.color[zone][2] != BR_MAX:
+            new_bri = BR_MAX
+            trans = 0
+        elif cmd == 'DON' and val is not None:
+            new_bri = int(round(int(val)*65535/255))
+            if new_bri > BR_MAX:
+                new_bri = BR_MAX
+            elif new_bri < BR_MIN:
+                new_bri = BR_MIN
+            trans = self.duration
+        elif self.power and self.color[zone][2] != BR_MAX:
+            new_bri = BR_MAX
+            trans = self.duration
+        if new_bri is not None:
+            new_color = list(self.color[zone])
+            new_color[2] = new_bri
+            try:
+                if self.current_zone == 0:
+                    self.device.set_zone_color(0, self.num_zones, new_color, trans, rapid=False)
+                else:
+                    self.device.set_zone_color(zone, zone, new_color, trans, rapid=False)
+            except lifxlan.WorkflowException as ex:
+                LOGGER.error('Connection Error DON {} bulb. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+            else:
+                self.setDriver('GV3', new_color[2])
         try:
             self.device.set_power(True)
-            self.setDriver('ST', 1)
         except lifxlan.WorkflowException as ex:
             LOGGER.error('Connection Error on setting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            self.power = True
+            self.setDriver('ST', self._bri_to_percent(self.color[zone][2]))
 
-    def setOff(self, command):
+    def dim(self, command):
+        zone = deepcopy(self.current_zone)
+        if self.current_zone != 0: zone -= 1
+        if self.power is False:
+            LOGGER.info('{} is off, ignoring DIM'.format(self.name))
+        new_bri = self.color[zone][2] - BR_INCREMENT
+        if new_bri < BR_MIN:
+            new_bri = BR_MIN
+        new_color = list(self.color[zone])
+        new_color[2] = new_bri
         try:
-            self.device.set_power(False)
-            self.setDriver('ST', 0)
+            if self.current_zone == 0:
+                self.device.set_zone_color(0, self.num_zones, new_color, BRTDIM_INTERVAL, rapid=False)
+            else:
+                self.device.set_zone_color(zone, zone, new_color, BRTDIM_INTERVAL, rapid=False)
         except lifxlan.WorkflowException as ex:
-            LOGGER.error('Connection Error on setting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+            LOGGER.error('Connection Error on dimming {} bulb. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            self.setDriver('ST', self._bri_to_percent(new_color[2]))
+            self.setDriver('GV3', new_color[2])
+
+    def brighten(self, command):
+        zone = deepcopy(self.current_zone)
+        if self.current_zone != 0: zone -= 1
+        new_color = list(self.color[zone])
+        if self.power is False:
+            # Bulb is currently off, let's turn it on ~2%
+            new_color[2] = BR_MIN
+            try:
+                if self.current_zone == 0:
+                    self.device.set_zone_color(0, self.num_zones, new_color, 0, rapid=False)
+                else:
+                    self.device.set_zone_color(zone, zone, new_color, 0, rapid=False)
+                self.device.set_power(True)
+            except lifxlan.WorkflowException as ex:
+                LOGGER.error('Connection Error on brightnening {} bulb. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+            else:
+                self.power = True
+                self.setDriver('ST', self._bri_to_percent(new_color[2]))
+            return
+        new_bri = self.color[zone][2] + BR_INCREMENT
+        if new_bri > BR_MAX:
+            new_bri = BR_MAX
+        new_color[2] = new_bri
+        try:
+            if self.current_zone == 0:
+                self.device.set_zone_color(0, self.num_zones, new_color, BRTDIM_INTERVAL, rapid=False)
+            else:
+                self.device.set_zone_color(zone, zone, new_color, BRTDIM_INTERVAL, rapid=False)
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error on dimming {} bulb. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            self.setDriver('ST', self._bri_to_percent(new_color[2]))
+            self.setDriver('GV3', new_color[2])
+
+    def fade_up(self, command):
+        zone = deepcopy(self.current_zone)
+        if self.current_zone != 0: zone -= 1
+        new_color = list(self.color[zone])
+        if self.power is False:
+            # Bulb is currently off, let's turn it on ~2%
+            new_color[2] = BR_MIN
+            try:
+                if self.current_zone == 0:
+                    self.device.set_zone_color(0, self.num_zones, new_color, 0, rapid=False)
+                else:
+                    self.device.set_zone_color(zone, zone, new_color, 0, rapid=False)
+                self.device.set_power(True)
+            except lifxlan.WorkflowException as ex:
+                LOGGER.error('Connection Error on brightnening {} bulb. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+            else:
+                self.power = True
+                self.setDriver('ST', self._bri_to_percent(new_color[2]))
+        if self.color[zone][2] == BR_MAX:
+            LOGGER.info('{} Can not FadeUp, already at maximum'.format(self.name))
+            return
+        new_color[2] = BR_MAX
+        try:
+            if self.current_zone == 0:
+                self.device.set_zone_color(0, self.num_zones, new_color, FADE_INTERVAL, rapid=False)
+            else:
+                self.device.set_zone_color(zone, zone, new_color, FADE_INTERVAL, rapid=False)
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error {} bulb Fade Up. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+
+    def fade_down(self, command):
+        zone = deepcopy(self.current_zone)
+        if self.current_zone != 0: zone -= 1
+        new_color = list(self.color[zone])
+        if self.power is False:
+            LOGGER.error('{} can not FadeDown as it is currently off'.format(self.name))
+            return
+        if self.color[zone][2] <= BR_MIN:
+            LOGGER.error('{} can not FadeDown as it is currently at minimum'.format(self.name))
+            return
+        new_color[2] = BR_MIN
+        try:
+            if self.current_zone == 0:
+                self.device.set_zone_color(0, self.num_zones, new_color, FADE_INTERVAL, rapid=False)
+            else:
+                self.device.set_zone_color(zone, zone, new_color, FADE_INTERVAL, rapid=False)
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error {} bulb Fade Down. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+
+    def fade_stop(self, command):
+        zone = deepcopy(self.current_zone)
+        if self.current_zone != 0: zone -= 1
+        if self.power is False:
+            LOGGER.error('{} can not FadeStop as it is currently off'.format(self.name))
+            return
+        # check current brightness level
+        try:
+            self.color = self.device.get_color_zones()
+        except (lifxlan.WorkflowException, OSError) as ex:
+            LOGGER.error('Connection Error on getting {} multizone color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
+                self.setDriver(driver, self.color[zone][ind])
+        if self.color[zone][2] == BR_MIN or self.color[zone][2] == BR_MAX:
+            LOGGER.error('{} can not FadeStop as it is currently at limit'.format(self.name))
+            return
+        try:
+            if self.current_zone == 0:
+                self.device.set_zone_color(0, self.num_zones, self.color[zone], 0, rapid=False)
+            else:
+                self.device.set_zone_color(zone, zone, self.color[zone], 0, rapid=False)
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error {} bulb Fade Stop. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
 
     def apply(self, command):
         try:
@@ -396,10 +695,10 @@ class MultiZone(Light):
                 elif _cmd == 'SETB':
                     new_color[2] = int(_val)
                     driver = ['GV3', new_color[2]]
-                elif _cmd == 'SETK':
+                elif _cmd == 'CLITEMP':
                     new_color[3] = int(_val)
                     driver = ['CLITEMP', new_color[3]]
-                elif _cmd == 'SETD':
+                elif _cmd == 'RR':
                     self.duration = _val
                     driver = ['RR', self.duration]
                 self.color[zone] = new_color
@@ -436,25 +735,30 @@ class MultiZone(Light):
             LOGGER.error('set mz hsbkdz error %s', str(ex))
 
     commands = {
-                    'DON': setOn, 'DOF': setOff,
-                    'APPLY': apply, 'QUERY': query,
+                    'DON': setOn, 'DOF': Light.setOff,
+                    'APPLY': apply, 'QUERY': Light.query,
                     'SET_COLOR': setColor, 'SETH': setManual,
                     'SETS': setManual, 'SETB': setManual,
-                    'SETK': setManual, 'SETD': setManual,
-                    'SETZ': setManual, 'SET_HSBKDZ': setHSBKDZ
+                    'CLITEMP': setManual, 'RR': setManual,
+                    'SETZ': setManual, 'SET_HSBKDZ': setHSBKDZ,
+                    'BRT': brighten, 'DIM': dim,
+                    'FDUP': fade_up, 'FDDOWN': fade_down,
+                    'FDSTOP': fade_stop, 'DFON': setOn,
+                    'DFOF': Light.setOff
                 }
 
-    drivers = [{'driver': 'ST', 'value': 0, 'uom': 25},
+    drivers = [{'driver': 'ST', 'value': 0, 'uom': 51},
                 {'driver': 'GV1', 'value': 0, 'uom': 56},
                 {'driver': 'GV2', 'value': 0, 'uom': 56},
                 {'driver': 'GV3', 'value': 0, 'uom': 56},
                 {'driver': 'CLITEMP', 'value': 0, 'uom': 26},
                 {'driver': 'GV4', 'value': 0, 'uom': 56},
-                {'driver': 'GV5', 'value': 0, 'uom': 25},
+                {'driver': 'GV5', 'value': 0, 'uom': 2},
                 {'driver': 'GV6', 'value': 0, 'uom': 20},
                 {'driver': 'RR', 'value': 0, 'uom': 42}]
 
     id = 'lifxmultizone'
+
 
 class Group(polyinterface.Node):
     """
@@ -474,6 +778,9 @@ class Group(polyinterface.Node):
     def update(self):
         self.numMembers = len(self.lifxGroup.devices)
         self.setDriver('ST', self.numMembers)
+
+    def long_update(self):
+        pass
 
     def query(self, command = None):
         self.update()
