@@ -5,18 +5,21 @@ CMD-ctl-DISCOVER-NAME = Re-Discover Bulbs
 CMD-ctl-DON-NAME = All On
 CMD-ctl-DOF-NAME = All Off
 ST-ctl-ST-NAME = NodeServer Online
+ST-ctl-GV0-NAME = Bulbs discovered
 
 # Color Bulbs
 ND-lifxcolor-NAME = LIFX Color Bulb
 ND-lifxcolor-ICON = Lamp
 
 ST-ST-NAME = Status
+ST-GV0-NAME = WiFi Signal (mW)
 ST-GV1-NAME = Hue
 ST-GV2-NAME = Saturation
 ST-GV3-NAME = Brightness
 ST-CLITEMP-NAME = Color Temperature
 ST-GV5-NAME = Online
 ST-GV6-NAME = Uptime
+ST-GV7-NAME = Infrared Brightness
 ST-RR-NAME = Transition time
 
 COLOR_CHOICE-0 = Red
@@ -32,6 +35,18 @@ COLOR_CHOICE-9 = Cold White
 COLOR_CHOICE-10 = Warm White
 COLOR_CHOICE-11 = Gold
 
+WF_CHOICE-0 = Saw
+WF_CHOICE-1 = Sine
+WF_CHOICE-2 = HalfSine
+WF_CHOICE-3 = Triangle
+WF_CHOICE-4 = Pulse
+WF_CHOICE-5 = Transient Saw
+WF_CHOICE-6 = Transient Sine
+WF_CHOICE-7 = Transient HalfSine
+WF_CHOICE-8 = Transient Triangle
+WF_CHOICE-9 = Transient Pulse
+
+
 #Generic for all Types
 CMD-DON-NAME = On
 CMD-DOF-NAME = Off
@@ -46,10 +61,12 @@ CMD-QUERY-NAME = Query
 CMD-SETH-NAME = Set Hue
 CMD-SETS-NAME = Set Saturation
 CMD-SETB-NAME = Set Brightness
+CMD-SETIR-NAME = Set Infrared Brightness
 CMD-CLITEMP-NAME = Set Color Temperature
 CMD-RR-NAME = Set Transition Time
 CMD-SET_HSBKD-NAME = Change HSBKD
 CMD-SET_COLOR-NAME = Set Color To
+CMD-WAVEFORM-NAME = Run Waveform
 
 CMDP-H-NAME = Hue
 CMDP-S-NAME = Saturation
@@ -57,6 +74,11 @@ CMDP-B-NAME = Brightness
 CMDP-K-NAME = Color Temperature
 CMDP-D-NAME = Transition Time
 CMDP-Z-NAME = Zone Number
+CMDP-PE-NAME = Period
+CMDP-CY-NAME = Cycles
+CMDP-DC-NAME = Duty Cycle
+CMDP-WF-NAME = Waveform
+
 
 # White Bulbs
 ND-lifxwhite-NAME = LIFX Color Bulb
@@ -71,7 +93,6 @@ ST-lifxg-ST-NAME = Number of Devices in Group
 ND-lifxmultizone-NAME = LIFX MultiZone Bulb
 ND-lifxmultizone-ICON = Lamp
 
-ST-lifxmz-ST-NAME = Bulb On
 ST-lifxmz-GV4-NAME = Current Zone
 CMD-lifxmz-SETZ-NAME = Set Zone
 CMD-lifxmz-SET_HSBKDZ-NAME = Change HSBKDZ
@@ -79,3 +100,4 @@ CMD-lifxmz-APPLY-NAME = Apply
 
 PGM-CMD-SET_HSBKD-FMT = /H// Hue ${v}/ /S// Saturation ${v}/ /B// Brightness ${v}/ /K// Color Temp ${v}/ /D// in ${v}/
 PGM-CMD-SET_HSBKDZ-FMT = /Z// Zone ${v}/ /H// Hue ${v}/ /S// Saturation ${v}/ /B// Brightness ${v}/ /K// Color Temp ${v}/ /D// in ${v}/
+PGM-CMD-WAVEFORM-FMT = /WF// ${v}/ /CY// ${v} cycles/ /PE// ${v} each,/ /DC// duty cycle ${v}/ /H// Hue ${v}/ /S// Saturation ${v}/ /B// Brightness ${v}/ /K// Color Temp ${v}/

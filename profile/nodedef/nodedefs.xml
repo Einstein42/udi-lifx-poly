@@ -4,6 +4,7 @@
         <editors />
         <sts>
             <st id="ST" editor="bool" />
+            <st id="GV0" editor="lifxclr" />
         </sts>
         <cmds>
             <sends />
@@ -20,6 +21,7 @@
         <editors />
         <sts>
             <st id="ST" editor="lifxst" />
+            <st id="GV0" editor="lifxwifi" />
             <st id="GV1" editor="lifxclr" />
             <st id="GV2" editor="lifxclr" />
             <st id="GV3" editor="lifxclr" />
@@ -28,6 +30,7 @@
             <st id="RR" editor="lifxduration" />
             <st id="GV5" editor="bool" />
             <st id="GV6" editor="lifxuptime" />
+            <st id="GV7" editor="lifxclr" />
         </sts>
         <cmds>
             <sends />
@@ -72,6 +75,19 @@
                     <p id="D" editor="lifxduration" init="RR" />
                     <p id="Z" editor="lifxzone" init="GV4" />
                 </cmd>
+                <cmd id="SETIR">
+                    <p id="" editor="lifxclr" init="GV7"/>
+                </cmd>
+                <cmd id="WAVEFORM">
+                    <p id="H" editor="lifxclr" init="GV1" />
+                    <p id="S" editor="lifxclr" init="GV2" />
+                    <p id="B" editor="lifxclr" init="GV3" />
+                    <p id="K" editor="lifxkelvin" init="CLITEMP" />
+                    <p id="PE" editor="lifxduration" init="RR" />
+                    <p id="CY" editor="lifxclr" />
+                    <p id="DC" editor="lifxduty" />
+                    <p id="WF" editor="lifxwave" />
+                </cmd>
             </accepts>
         </cmds>
     </nodeDef>
@@ -79,6 +95,7 @@
     <nodeDef id="lifxcolor" nls="lifxc">
         <editors />
         <sts>
+            <st id="GV0" editor="lifxwifi" />
             <st id="ST" editor="lifxst" />
             <st id="GV1" editor="lifxclr" />
             <st id="GV2" editor="lifxclr" />
@@ -87,6 +104,7 @@
             <st id="RR" editor="lifxduration" />
             <st id="GV5" editor="bool" />
             <st id="GV6" editor="lifxuptime" />
+            <st id="GV7" editor="lifxclr" />
         </sts>
         <cmds>
             <sends />
@@ -126,6 +144,19 @@
                     <p id="K" editor="lifxkelvin" init="CLITEMP" />
                     <p id="D" editor="lifxduration" init="RR" />
                 </cmd>
+                <cmd id="SETIR">
+                    <p id="" editor="lifxclr" init="GV7"/>
+                </cmd>
+                <cmd id="WAVEFORM">
+                    <p id="H" editor="lifxclr" init="GV1" />
+                    <p id="S" editor="lifxclr" init="GV2" />
+                    <p id="B" editor="lifxclr" init="GV3" />
+                    <p id="K" editor="lifxkelvin" init="CLITEMP" />
+                    <p id="PE" editor="lifxduration" init="RR" />
+                    <p id="CY" editor="lifxclr" />
+                    <p id="DC" editor="lifxduty" />
+                    <p id="WF" editor="lifxwave" />
+                </cmd>
             </accepts>
         </cmds>
     </nodeDef>
@@ -133,6 +164,7 @@
     <nodeDef id="lifxwhite" nls="lifxw">
         <editors />
         <sts>
+            <st id="GV0" editor="lifxwifi" />
             <st id="ST" editor="bool" />
             <st id="GV3" editor="lifxclr" />
             <st id="CLITEMP" editor="lifxkelvin" />

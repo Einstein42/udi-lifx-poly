@@ -12,6 +12,7 @@ import lifxlan
 from copy import deepcopy
 import json
 from threading import Thread
+from pathlib import Path
 
 
 LOGGER = polyinterface.LOGGER
@@ -55,12 +56,31 @@ class Controller(polyinterface.Controller):
         self.name = 'LiFX Controller'
         self.discovery = False
         self.discovery_thread = None
+        self.update_nodes = False
 
     def start(self):
         LOGGER.info('Starting LiFX Polyglot v2 NodeServer version {}'.format(VERSION))
+        self._checkProfile()
         self.lifxLan = lifxlan.LifxLAN()
         self.discover()
         LOGGER.debug('Start complete')
+
+    def _checkProfile(self):
+        profile_version_file = Path('profile/version.txt')
+        if profile_version_file.is_file() and 'customData' in self.polyConfig:
+            with profile_version_file.open() as f:
+                profile_version = f.read().replace('\n', '')
+                f.close()
+            if 'prof_ver' in self.polyConfig['customData']:
+                if self.polyConfig['customData']['prof_ver'] != profile_version:
+                    self.update_nodes = True
+            else:
+                self.update_nodes = True
+            if self.update_nodes:
+                LOGGER.info('New Profile Version detected: {}, all nodes will be updated'.format(profile_version))
+                cust_data = deepcopy(self.polyConfig['customData'])
+                cust_data['prof_ver'] = profile_version
+                self.saveCustomData(cust_data)
 
     def shortPoll(self):
         if self.discovery:
@@ -97,7 +117,16 @@ class Controller(polyinterface.Controller):
         LOGGER.info('Starting LiFX Discovery thread...')
         try:
             devices = self.lifxLan.get_lights()
-            LOGGER.info('{} bulbs found. Checking status and adding to ISY if necessary.'.format(len(devices)))
+            bulbs_found = len(devices)
+            LOGGER.info('{} bulbs found. Checking status and adding to ISY if necessary.'.format(bulbs_found))
+            try:
+                old_bulbs_found = int(self.getDriver('GV0'))
+            except:
+                old_bulbs_found = bulbs_found
+            else:
+                if bulbs_found != old_bulbs_found:
+                    LOGGER.info('NOTICE: Bulb count {} is different, was {} previously'.format(bulbs_found, old_bulbs_found))
+            self.setDriver('GV0', bulbs_found)
             for d in devices:
                 label = str(d.get_label())
                 name = 'LIFX {}'.format(label)
@@ -107,18 +136,19 @@ class Controller(polyinterface.Controller):
                     ip = d.get_ip_addr()
                     if d.supports_multizone():
                         LOGGER.info('Found MultiZone Bulb: {}({})'.format(name, address))
-                        self.addNode(MultiZone(self, self.address, address, name, mac, ip, label))
+                        self.addNode(MultiZone(self, self.address, address, name, mac, ip, label), update = self.update_nodes)
                     else:
                         LOGGER.info('Found Bulb: {}({})'.format(name, address))
-                        self.addNode(Light(self, self.address, address, name, mac, ip, label))
+                        self.addNode(Light(self, self.address, address, name, mac, ip, label), update = self.update_nodes)
                 gid, glabel, gupdatedat = d.get_group_tuple()
                 gaddress = glabel.replace("'", "").replace(' ', '').lower()[:12]
                 if not gaddress in self.nodes:
                     LOGGER.info('Found LiFX Group: {}'.format(glabel))
-                    self.addNode(Group(self, self.address, gaddress, gid, glabel, gupdatedat))
+                    self.addNode(Group(self, self.address, gaddress, gid, glabel, gupdatedat), update = self.update_nodes)
         except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
             LOGGER.error('discovery Error: {}'.format(ex))
         self.discovery = False
+        self.update_nodes = False
         LOGGER.info('LiFX Discovery thread is complete.')
 
     def all_on(self, command):
@@ -132,6 +162,12 @@ class Controller(polyinterface.Controller):
             self.lifxLan.set_power_all_lights("off", rapid=True)
         except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
             LOGGER.error('All Off Error: {}'.format(ex))
+
+    drivers = [{'driver': 'ST', 'value': 0, 'uom': 2},
+               {'driver': 'GV0', 'value': 0, 'uom': 56}
+              ]
+
+    id = 'controller'
 
     commands = {'DISCOVER': discover, 'DON': all_on, 'DOF': all_off}
 
@@ -202,6 +238,23 @@ class Light(polyinterface.Node):
         else:
             connected = 1
             self.setDriver('GV6', self.uptime)
+        if self.device.supports_infrared():
+            try:
+                ir_brightness = self.device.get_infrared()
+            except (lifxlan.WorkflowException, OSError) as ex:
+                LOGGER.error('Connection Error on getting {} bulb Infrared. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+            else:
+                connected = 1
+                self.setDriver('GV7', ir_brightness)
+        else:
+            self.setDriver('GV7', 0)
+        try:
+            wifi_signal = float(self.device.get_wifi_signal_mw())
+        except (lifxlan.WorkflowException, OSError) as ex:
+            LOGGER.error('Connection Error on getting {} bulb WiFi signal strength. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            connected = 1
+            self.setDriver('GV0', round(wifi_signal, 1))
         self.connected = connected
         self.setDriver('GV5', self.connected)
         self.lastupdate = time.time()
@@ -405,13 +458,49 @@ class Light(polyinterface.Node):
             self.setDriver(driver, self.color[ind])
         self.setDriver('RR', self.duration)
 
+    def set_ir_brightness(self, command):
+        _val = int(command.get('value'))
+        if not self.device.supports_infrared():
+            LOGGER.error('{} is not IR capable'.format(self.name))
+            return
+        try:
+            self.device.set_infrared(_val)
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error on setting {} bulb IR Brightness. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            self.setDriver('GV7', _val)
+
+    def set_wf(self, command):
+        WAVEFORM = ['Saw', 'Sine', 'HalfSine', 'Triangle', 'Pulse']
+        if self.power is False:
+            LOGGER.error('{} can not run Waveform as it is currently off'.format(self.name))
+            return
+        query = command.get('query')
+        wf_color = [int(query.get('H.uom56')), int(query.get('S.uom56')), int(query.get('B.uom56')), int(query.get('K.uom26'))]
+        wf_period = int(query.get('PE.uom42'))
+        wf_cycles = int(query.get('CY.uom56'))
+        wf_duty_cycle = int(query.get('DC.uom56'))
+        wf_form = int(query.get('WF.uom25'))
+        if wf_form >= 5:
+            wf_transient = 1
+            wf_form -= 5
+        else:
+            wf_transient = 0
+        LOGGER.debug('Color tuple: {}, Period: {}, Cycles: {}, Duty cycle: {}, Form: {}, Transient: {}'.format(wf_color, wf_period, wf_cycles, wf_duty_cycle, WAVEFORM[wf_form], wf_transient))
+        try:
+            self.device.set_waveform(wf_transient, wf_color, wf_period, wf_cycles, wf_duty_cycle, wf_form)
+        except lifxlan.WorkflowException as ex:
+                LOGGER.error('Connection Error on setting {} bulb Waveform. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+
     drivers = [{'driver': 'ST', 'value': 0, 'uom': 51},
+                {'driver': 'GV0', 'value': 0, 'uom': 56},
                 {'driver': 'GV1', 'value': 0, 'uom': 56},
                 {'driver': 'GV2', 'value': 0, 'uom': 56},
                 {'driver': 'GV3', 'value': 0, 'uom': 56},
                 {'driver': 'CLITEMP', 'value': 0, 'uom': 26},
                 {'driver': 'GV5', 'value': 0, 'uom': 2},
                 {'driver': 'GV6', 'value': 0, 'uom': 20},
+                {'driver': 'GV7', 'value': 0, 'uom': 56},
                 {'driver': 'RR', 'value': 0, 'uom': 42}]
 
     id = 'lifxcolor'
@@ -424,7 +513,8 @@ class Light(polyinterface.Node):
                     'RR': setManual, 'SET_HSBKD': setHSBKD,
                     'BRT': brighten, 'DIM': dim, 'FDUP': fade_up,
                     'FDDOWN': fade_down, 'FDSTOP': fade_stop,
-                    'DFON': setOn, 'DFOF': setOff
+                    'DFON': setOn, 'DFOF': setOff,
+                    'SETIR': set_ir_brightness, 'WAVEFORM': set_wf
                 }
 
 class MultiZone(Light):
@@ -744,10 +834,12 @@ class MultiZone(Light):
                     'BRT': brighten, 'DIM': dim,
                     'FDUP': fade_up, 'FDDOWN': fade_down,
                     'FDSTOP': fade_stop, 'DFON': setOn,
-                    'DFOF': Light.setOff
+                    'DFOF': Light.setOff, 'SETIR': Light.set_ir_brightness,
+                    'WAVEFORM': Light.set_wf
                 }
 
     drivers = [{'driver': 'ST', 'value': 0, 'uom': 51},
+                {'driver': 'GV0', 'value': 0, 'uom': 56},
                 {'driver': 'GV1', 'value': 0, 'uom': 56},
                 {'driver': 'GV2', 'value': 0, 'uom': 56},
                 {'driver': 'GV3', 'value': 0, 'uom': 56},
@@ -755,6 +847,7 @@ class MultiZone(Light):
                 {'driver': 'GV4', 'value': 0, 'uom': 56},
                 {'driver': 'GV5', 'value': 0, 'uom': 2},
                 {'driver': 'GV6', 'value': 0, 'uom': 20},
+                {'driver': 'GV7', 'value': 0, 'uom': 56},
                 {'driver': 'RR', 'value': 0, 'uom': 42}]
 
     id = 'lifxmultizone'

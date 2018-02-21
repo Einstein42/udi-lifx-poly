@@ -31,4 +31,16 @@
     <editor id="lifxst">
         <range uom="51" min="0" max="100" prec="4" />
     </editor>
+    <!-- LIFX WiFi Signal Level -->
+    <editor id="lifxwifi">
+        <range uom="56" min="0" max="100" prec="1" />
+    </editor>
+    <!-- LIFX Duty Cycle -->
+    <editor id="lifxduty">
+        <range uom="56" min="-32768" max="32768" prec="0" step="1" />
+    </editor>
+    <!-- LIFX Waveform -->
+    <editor id="lifxwave">
+        <range uom="25" subset="0-9" nls="WF_CHOICE" />
+    </editor>
 </editors>
