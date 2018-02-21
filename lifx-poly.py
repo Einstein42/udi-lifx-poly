@@ -919,7 +919,7 @@ class Group(polyinterface.Node):
         else:
             LOGGER.info('Recieved SetHSBKD command for group {} from ISY, Setting all members to Color {}, duration {}'.format(self.label, color, duration))
 
-    drivers = [{'driver': 'ST', 'value': 0, 'uom': 25}]
+    drivers = [{'driver': 'ST', 'value': 0, 'uom': 56}]
 
     commands = {
                     'DON': setOn, 'DOF': setOff, 'QUERY': query,
