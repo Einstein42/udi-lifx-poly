@@ -136,10 +136,10 @@ class Controller(polyinterface.Controller):
                     ip = d.get_ip_addr()
                     if d.supports_multizone():
                         LOGGER.info('Found MultiZone Bulb: {}({})'.format(name, address))
-                        self.addNode(MultiZone(self, self.address, address, name, mac, ip, label), update = self.update_nodes)
+                        self.addNode(MultiZone(self, self.address, address, name, d, label), update = self.update_nodes)
                     else:
                         LOGGER.info('Found Bulb: {}({})'.format(name, address))
-                        self.addNode(Light(self, self.address, address, name, mac, ip, label), update = self.update_nodes)
+                        self.addNode(Light(self, self.address, address, name, d, label), update = self.update_nodes)
                 gid, glabel, gupdatedat = d.get_group_tuple()
                 gaddress = glabel.replace("'", "").replace(' ', '').lower()[:12]
                 if not gaddress in self.nodes:
@@ -176,11 +176,9 @@ class Light(polyinterface.Node):
     """
     LiFX Light Parent Class
     """
-    def __init__(self, controller, primary, address, name, mac, ip, label):
+    def __init__(self, controller, primary, address, name, dev, label):
         super().__init__(controller, primary, address, name)
-        self.device = None
-        self.mac = mac
-        self.ip = ip
+        self.device = dev
         self.name = name
         self.power = False
         self.label = label
@@ -191,7 +189,6 @@ class Light(polyinterface.Node):
         self.duration = 0
 
     def start(self):
-        self.device = lifxlan.Light(self.mac, self.ip)
         try:
             self.duration = int(self.getDriver('RR'))
         except:
@@ -518,8 +515,8 @@ class Light(polyinterface.Node):
                 }
 
 class MultiZone(Light):
-    def __init__(self, controller, primary, address, name, mac, ip, label):
-        super().__init__(controller, primary, address, name, mac, ip, label)
+    def __init__(self, controller, primary, address, name, dev, label):
+        super().__init__(controller, primary, address, name, dev, label)
         self.num_zones = 0
         self.current_zone = 0
         self.new_color = None
@@ -542,9 +539,9 @@ class MultiZone(Light):
                         self.setDriver(driver, self.color[zone][ind])
                     except (TypeError) as e:
                         LOGGER.debug('setDriver for color caught an error. color was : {}'.format(self.color or None))
-                    self.setDriver('GV4', self.current_zone)
+                self.setDriver('GV4', self.current_zone)
         try:
-            self.power = 1 if self.device.get_power() == 65535 else 0
+            self.power = True if self.device.get_power() == 65535 else False
         except (lifxlan.WorkflowException, OSError) as ex:
             LOGGER.error('Connection Error on getting {} multizone power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
@@ -556,7 +553,6 @@ class MultiZone(Light):
         self.lastupdate = time.time()
 
     def start(self):
-        self.device = lifxlan.MultiZoneLight(self.mac, self.ip)
         try:
             self.duration = int(self.getDriver('RR'))
         except:
