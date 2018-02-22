@@ -61,7 +61,6 @@ class Controller(polyinterface.Controller):
     def start(self):
         LOGGER.info('Starting LiFX Polyglot v2 NodeServer version {}'.format(VERSION))
         self._checkProfile()
-        self.lifxLan = lifxlan.LifxLAN()
         self.discover()
         LOGGER.debug('Start complete')
 
@@ -101,6 +100,7 @@ class Controller(polyinterface.Controller):
         pass
 
     def discover(self, command=None):
+        self.lifxLan = lifxlan.LifxLAN()
         if self.discovery_thread is not None:
             if self.discovery_thread.isAlive():
                 LOGGER.info('Discovery is still in progress')
