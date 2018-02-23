@@ -546,11 +546,22 @@ class MultiZone(Light):
             LOGGER.error('Connection Error on getting {} multizone power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
             connected = 1
-            self.setDriver('ST', self._bri_to_percent(self.color[zone][2]))
+            self._set_st()
         self.connected = connected
         self.setDriver('GV5', self.connected)
         self.setDriver('RR', self.duration)
         self.lastupdate = time.time()
+
+    def _set_st(self):
+        if self.num_zones == 0: return
+        if self.power:
+            avg_brightness = 0
+            for z in self.color:
+                avg_brightness += z[2]
+            avg_brightness /= self.num_zones
+            self.setDriver('ST', self._bri_to_percent(avg_brightness))
+        else:
+            self.setDriver('ST', 0)
 
     def start(self):
         try:
@@ -601,7 +612,7 @@ class MultiZone(Light):
             LOGGER.error('Connection Error on setting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
             self.power = True
-            self.setDriver('ST', self._bri_to_percent(self.color[zone][2]))
+            self._set_st()
 
     def dim(self, command):
         zone = deepcopy(self.current_zone)
@@ -621,7 +632,7 @@ class MultiZone(Light):
         except lifxlan.WorkflowException as ex:
             LOGGER.error('Connection Error on dimming {} bulb. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
-            self.setDriver('ST', self._bri_to_percent(new_color[2]))
+            self._set_st()
             self.setDriver('GV3', new_color[2])
 
     def brighten(self, command):
@@ -641,7 +652,7 @@ class MultiZone(Light):
                 LOGGER.error('Connection Error on brightnening {} bulb. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
             else:
                 self.power = True
-                self.setDriver('ST', self._bri_to_percent(new_color[2]))
+                self._set_st()
             return
         new_bri = self.color[zone][2] + BR_INCREMENT
         if new_bri > BR_MAX:
@@ -655,7 +666,7 @@ class MultiZone(Light):
         except lifxlan.WorkflowException as ex:
             LOGGER.error('Connection Error on dimming {} bulb. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
-            self.setDriver('ST', self._bri_to_percent(new_color[2]))
+            self._set_st()
             self.setDriver('GV3', new_color[2])
 
     def fade_up(self, command):
@@ -675,7 +686,7 @@ class MultiZone(Light):
                 LOGGER.error('Connection Error on brightnening {} bulb. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
             else:
                 self.power = True
-                self.setDriver('ST', self._bri_to_percent(new_color[2]))
+                self._set_st()
         if self.color[zone][2] == BR_MAX:
             LOGGER.info('{} Can not FadeUp, already at maximum'.format(self.name))
             return
