@@ -246,7 +246,7 @@ class Light(polyinterface.Node):
         else:
             self.setDriver('GV7', 0)
         try:
-            wifi_signal = float(self.device.get_wifi_signal_mw())
+            wifi_signal = self.device.get_wifi_signal_mw()
         except (lifxlan.WorkflowException, OSError) as ex:
             LOGGER.error('Connection Error on getting {} bulb WiFi signal strength. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
