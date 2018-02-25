@@ -54,7 +54,6 @@ class Controller(polyinterface.Controller):
         super().__init__(polyglot)
         self.lifxLan = None
         self.name = 'LiFX Controller'
-        self.discovery = False
         self.discovery_thread = None
         self.update_nodes = False
 
@@ -63,6 +62,9 @@ class Controller(polyinterface.Controller):
         self._checkProfile()
         self.discover()
         LOGGER.debug('Start complete')
+
+    def stop(self):
+        LOGGER.info('Stopping LiFX Polyglot v2 NodeServer version {}'.format(VERSION))
 
     def _checkProfile(self):
         profile_version_file = Path('profile/version.txt')
@@ -82,14 +84,22 @@ class Controller(polyinterface.Controller):
                 self.saveCustomData(cust_data)
 
     def shortPoll(self):
-        if self.discovery:
-            return
+        if self.discovery_thread is not None:
+            if self.discovery_thread.isAlive():
+                LOGGER.debug('Skipping shortPoll() while discovery in progress...')
+                return
+            else:
+                self.discovery_thread = None
         for node in self.nodes:
             self.nodes[node].update()
 
     def longPoll(self):
-        if self.discovery:
-            return
+        if self.discovery_thread is not None:
+            if self.discovery_thread.isAlive():
+                LOGGER.debug('Skipping longPoll() while discovery in progress...')
+                return
+            else:
+                self.discovery_thread = None
         for node in self.nodes:
             self.nodes[node].long_update()
 
@@ -105,15 +115,10 @@ class Controller(polyinterface.Controller):
             if self.discovery_thread.isAlive():
                 LOGGER.info('Discovery is still in progress')
                 return
-            else:
-                self.discovery = False
         self.discovery_thread = Thread(target=self._discovery_process)
         self.discovery_thread.start()
 
     def _discovery_process(self):
-        if self.discovery:
-            return
-        self.discovery = True
         LOGGER.info('Starting LiFX Discovery thread...')
         try:
             devices = self.lifxLan.get_lights()
@@ -147,7 +152,6 @@ class Controller(polyinterface.Controller):
                     self.addNode(Group(self, self.address, gaddress, gid, glabel, gupdatedat), update = self.update_nodes)
         except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
             LOGGER.error('discovery Error: {}'.format(ex))
-        self.discovery = False
         self.update_nodes = False
         LOGGER.info('LiFX Discovery thread is complete.')
 
