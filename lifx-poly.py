@@ -137,8 +137,6 @@ class Controller(polyinterface.Controller):
                 name = 'LIFX {}'.format(label)
                 address = d.get_mac_addr().replace(':', '').lower()
                 if not address in self.nodes:
-                    mac = d.get_mac_addr()
-                    ip = d.get_ip_addr()
                     if d.supports_multizone():
                         LOGGER.info('Found MultiZone Bulb: {}({})'.format(name, address))
                         self.addNode(MultiZone(self, self.address, address, name, d, label), update = self.update_nodes)
