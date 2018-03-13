@@ -58,7 +58,7 @@ class Controller(polyinterface.Controller):
         self.update_nodes = False
 
     def start(self):
-        LOGGER.info('Starting LiFX Polyglot v2 NodeServer version {}'.format(VERSION))
+        LOGGER.info('Starting LiFX Polyglot v2 NodeServer version {}, polyinterface: {}'.format(VERSION, polyinterface.__version__))
         self._checkProfile()
         self.discover()
         LOGGER.debug('Start complete')
