@@ -4,6 +4,9 @@ ND-controller-ICON = GenericCtl
 CMD-ctl-DISCOVER-NAME = Re-Discover Bulbs
 CMD-ctl-DON-NAME = All On
 CMD-ctl-DOF-NAME = All Off
+CMD-ctl-SET_COLOR-NAME = Color All
+CMD-ctl-SET_HSBKD-NAME = All HSBKD
+CMD-ctl-WAVEFORM-NAME = All Waveform
 ST-ctl-ST-NAME = NodeServer Online
 ST-ctl-GV0-NAME = Bulbs discovered
 

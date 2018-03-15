@@ -157,13 +157,52 @@ class Controller(polyinterface.Controller):
         try:
             self.lifxLan.set_power_all_lights("on", rapid=True)
         except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
-            LOGGER.error('All On Error: {}'.format(ex))
+            LOGGER.error('All On Error: {}'.format(str(ex)))
 
     def all_off(self, command):
         try:
             self.lifxLan.set_power_all_lights("off", rapid=True)
         except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
-            LOGGER.error('All Off Error: {}'.format(ex))
+            LOGGER.error('All Off Error: {}'.format(str(ex)))
+
+    def set_wf(self, command):
+        WAVEFORM = ['Saw', 'Sine', 'HalfSine', 'Triangle', 'Pulse']
+        query = command.get('query')
+        wf_color = [int(query.get('H.uom56')), int(query.get('S.uom56')), int(query.get('B.uom56')), int(query.get('K.uom26'))]
+        wf_period = int(query.get('PE.uom42'))
+        wf_cycles = int(query.get('CY.uom56'))
+        wf_duty_cycle = int(query.get('DC.uom56'))
+        wf_form = int(query.get('WF.uom25'))
+        if wf_form >= 5:
+            wf_transient = 1
+            wf_form -= 5
+        else:
+            wf_transient = 0
+        LOGGER.debug('Color tuple: {}, Period: {}, Cycles: {}, Duty cycle: {}, Form: {}, Transient: {}'.format(wf_color, wf_period, wf_cycles, wf_duty_cycle, WAVEFORM[wf_form], wf_transient))
+        try:
+            self.lifxLan.set_waveform_all_lights(wf_transient, wf_color, wf_period, wf_cycles, wf_duty_cycle, wf_form)
+        except lifxlan.WorkflowException as ex:
+                LOGGER.error('Connection Error on setting Waveform for all lights: {}'.format(str(ex)))
+
+    def setColor(self, command):
+        _color = int(command.get('value'))
+        try:
+            self.lifxLan.set_color_all_lights(COLORS[_color][1], rapid=True)
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error on setting all bulb color: {}'.format(str(ex)))
+
+    def setHSBKD(self, command):
+        query = command.get('query')
+        try:
+            color = [int(query.get('H.uom56')), int(query.get('S.uom56')), int(query.get('B.uom56')), int(query.get('K.uom26'))]
+            duration = int(query.get('D.uom42'))
+            LOGGER.info('Received manual change, updating all bulb to: {} duration: {}'.format(str(color), duration))
+        except TypeError:
+            duration = 0
+        try:
+            self.lifxLan.set_color_all_lights(color, duration=duration, rapid=True)
+        except lifxlan.WorkflowException as ex:
+                LOGGER.error('Connection Error on setting all bulb color: {}'.format(str(ex)))
 
     drivers = [{'driver': 'ST', 'value': 0, 'uom': 2},
                {'driver': 'GV0', 'value': 0, 'uom': 56}
@@ -171,7 +210,9 @@ class Controller(polyinterface.Controller):
 
     id = 'controller'
 
-    commands = {'DISCOVER': discover, 'DON': all_on, 'DOF': all_off}
+    commands = {'DISCOVER': discover, 'DON': all_on, 'DOF': all_off,
+                'SET_COLOR': setColor, 'SET_HSBKD': setHSBKD, 'WAVEFORM': set_wf
+               }
 
 
 class Light(polyinterface.Node):

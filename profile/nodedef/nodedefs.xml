@@ -12,6 +12,26 @@
                 <cmd id="DISCOVER" />
                 <cmd id="DON" />
                 <cmd id="DOF" />
+                <cmd id="SET_COLOR">
+                   <p id="" editor="lifxchoice" />
+                </cmd>
+                <cmd id="SET_HSBKD">
+                    <p id="H" editor="lifxclr" init="GV1" />
+                    <p id="S" editor="lifxclr" init="GV2" />
+                    <p id="B" editor="lifxclr" init="GV3" />
+                    <p id="K" editor="lifxkelvin" init="CLITEMP" />
+                    <p id="D" editor="lifxduration" init="RR" />
+                </cmd>
+                <cmd id="WAVEFORM">
+                    <p id="H" editor="lifxclr" init="GV1" />
+                    <p id="S" editor="lifxclr" init="GV2" />
+                    <p id="B" editor="lifxclr" init="GV3" />
+                    <p id="K" editor="lifxkelvin" init="CLITEMP" />
+                    <p id="PE" editor="lifxduration" init="RR" />
+                    <p id="CY" editor="lifxclr" />
+                    <p id="DC" editor="lifxduty" />
+                    <p id="WF" editor="lifxwave" />
+                </cmd>
             </accepts>
         </cmds>
     </nodeDef>
