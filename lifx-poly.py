@@ -82,6 +82,7 @@ class Controller(polyinterface.Controller):
                 cust_data = deepcopy(self.polyConfig['customData'])
                 cust_data['prof_ver'] = profile_version
                 self.saveCustomData(cust_data)
+                self.updateNode(self)
 
     def shortPoll(self):
         if self.discovery_thread is not None:
