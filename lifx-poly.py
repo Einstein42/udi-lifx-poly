@@ -642,7 +642,7 @@ class MultiZone(Light):
             new_color[2] = new_bri
             try:
                 if self.current_zone == 0:
-                    self.device.set_zone_color(0, self.num_zones, new_color, trans, rapid=False)
+                    self.device.set_color(new_color, trans, rapid=False)
                 else:
                     self.device.set_zone_color(zone, zone, new_color, trans, rapid=False)
             except lifxlan.WorkflowException as ex:
@@ -669,7 +669,7 @@ class MultiZone(Light):
         new_color[2] = new_bri
         try:
             if self.current_zone == 0:
-                self.device.set_zone_color(0, self.num_zones, new_color, BRTDIM_INTERVAL, rapid=False)
+                self.device.set_color(new_color, BRTDIM_INTERVAL, rapid=False)
             else:
                 self.device.set_zone_color(zone, zone, new_color, BRTDIM_INTERVAL, rapid=False)
         except lifxlan.WorkflowException as ex:
@@ -687,7 +687,7 @@ class MultiZone(Light):
             new_color[2] = BR_MIN
             try:
                 if self.current_zone == 0:
-                    self.device.set_zone_color(0, self.num_zones, new_color, 0, rapid=False)
+                    self.device.set_color(new_color, 0, rapid=False)
                 else:
                     self.device.set_zone_color(zone, zone, new_color, 0, rapid=False)
                 self.device.set_power(True)
@@ -703,7 +703,7 @@ class MultiZone(Light):
         new_color[2] = new_bri
         try:
             if self.current_zone == 0:
-                self.device.set_zone_color(0, self.num_zones, new_color, BRTDIM_INTERVAL, rapid=False)
+                self.device.set_color(new_color, BRTDIM_INTERVAL, rapid=False)
             else:
                 self.device.set_zone_color(zone, zone, new_color, BRTDIM_INTERVAL, rapid=False)
         except lifxlan.WorkflowException as ex:
@@ -721,7 +721,7 @@ class MultiZone(Light):
             new_color[2] = BR_MIN
             try:
                 if self.current_zone == 0:
-                    self.device.set_zone_color(0, self.num_zones, new_color, 0, rapid=False)
+                    self.device.set_color(new_color, 0, rapid=False)
                 else:
                     self.device.set_zone_color(zone, zone, new_color, 0, rapid=False)
                 self.device.set_power(True)
@@ -736,7 +736,7 @@ class MultiZone(Light):
         new_color[2] = BR_MAX
         try:
             if self.current_zone == 0:
-                self.device.set_zone_color(0, self.num_zones, new_color, FADE_INTERVAL, rapid=False)
+                self.device.set_color(new_color, FADE_INTERVAL, rapid=False)
             else:
                 self.device.set_zone_color(zone, zone, new_color, FADE_INTERVAL, rapid=False)
         except lifxlan.WorkflowException as ex:
@@ -755,7 +755,7 @@ class MultiZone(Light):
         new_color[2] = BR_MIN
         try:
             if self.current_zone == 0:
-                self.device.set_zone_color(0, self.num_zones, new_color, FADE_INTERVAL, rapid=False)
+                self.device.set_color(new_color, FADE_INTERVAL, rapid=False)
             else:
                 self.device.set_zone_color(zone, zone, new_color, FADE_INTERVAL, rapid=False)
         except lifxlan.WorkflowException as ex:
@@ -780,7 +780,7 @@ class MultiZone(Light):
             return
         try:
             if self.current_zone == 0:
-                self.device.set_zone_color(0, self.num_zones, self.color[zone], 0, rapid=False)
+                self.device.set_color(self.color[zone], 0, rapid=False)
             else:
                 self.device.set_zone_color(zone, zone, self.color[zone], 0, rapid=False)
         except lifxlan.WorkflowException as ex:
@@ -804,7 +804,7 @@ class MultiZone(Light):
                 zone = deepcopy(self.current_zone)
                 if self.current_zone != 0: zone -= 1
                 if self.current_zone == 0:
-                    self.device.set_zone_color(self.current_zone, self.num_zones, COLORS[_color][1], self.duration, True)
+                    self.device.set_color(COLORS[_color][1], self.duration, True)
                 else:
                     self.device.set_zone_color(zone, zone, COLORS[_color][1], self.duration, True)
                 LOGGER.info('Received SetColor command from ISY. Changing {} color to: {}'.format(self.address, COLORS[_color][0]))
@@ -843,7 +843,7 @@ class MultiZone(Light):
                     driver = ['RR', self.duration]
                 self.color[zone] = new_color
                 if self.current_zone == 0:
-                    self.device.set_zone_color(0, self.num_zones, new_color, self.duration, rapid=False)
+                    self.device.set_color(new_color, self.duration, rapid=False)
                 else:
                     self.device.set_zone_color(zone, zone, new_color, self.duration, rapid=False)
             except (lifxlan.WorkflowException, TypeError) as ex:
@@ -868,7 +868,7 @@ class MultiZone(Light):
             self.duration = 0
         try:
             if current_zone == 0:
-                self.device.set_zone_color(zone, self.num_zones, self.new_color, self.duration, rapid=False)
+                self.device.set_color(self.new_color, self.duration, rapid=False)
             else:
                 self.device.set_zone_color(zone, zone, self.new_color, self.duration, rapid=False, apply = 0)
         except (lifxlan.WorkflowException, IOError) as ex:
