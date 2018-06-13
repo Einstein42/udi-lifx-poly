@@ -53,7 +53,10 @@
             <st id="GV7" editor="lifxclr" />
         </sts>
         <cmds>
-            <sends />
+            <sends>
+                <cmd id="DON" />
+                <cmd id="DOF" />
+            </sends>
             <accepts>
                 <cmd id="DON" />
                 <cmd id="DOF" />
@@ -127,7 +130,10 @@
             <st id="GV7" editor="lifxclr" />
         </sts>
         <cmds>
-            <sends />
+            <sends>
+                <cmd id="DON" />
+                <cmd id="DOF" />
+            </sends>
             <accepts>
                 <cmd id="DON" />
                 <cmd id="DOF" />
@@ -193,7 +199,10 @@
             <st id="GV6" editor="lifxuptime" />
         </sts>
         <cmds>
-            <sends />
+            <sends>
+                <cmd id="DON" />
+                <cmd id="DOF" />
+            </sends>
             <accepts>
                 <cmd id="DON" />
                 <cmd id="DOF" />

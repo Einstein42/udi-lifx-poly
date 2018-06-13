@@ -256,7 +256,13 @@ class Light(polyinterface.Node):
             for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
                 self.setDriver(driver, self.color[ind])
         try:
-            self.power = True if self.device.get_power() == 65535 else False
+            power_now = True if self.device.get_power() == 65535 else False
+            if self.power != power_now:
+                if power_now:
+                    self.reportCmd('DON')
+                else:
+                    self.reportCmd('DOF')
+            self.power = power_now
         except (lifxlan.WorkflowException, OSError) as ex:
             LOGGER.error('Connection Error on getting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
@@ -585,7 +591,13 @@ class MultiZone(Light):
                         LOGGER.debug('setDriver for color caught an error. color was : {}'.format(self.color or None))
                 self.setDriver('GV4', self.current_zone)
         try:
-            self.power = True if self.device.get_power() == 65535 else False
+            power_now = True if self.device.get_power() == 65535 else False
+            if self.power != power_now:
+                if power_now:
+                    self.reportCmd('DON')
+                else:
+                    self.reportCmd('DOF')
+            self.power = power_now
         except (lifxlan.WorkflowException, OSError) as ex:
             LOGGER.error('Connection Error on getting {} multizone power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
