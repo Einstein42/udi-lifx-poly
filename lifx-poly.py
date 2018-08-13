@@ -944,7 +944,7 @@ class Group(polyinterface.Node):
 
     def setOn(self, command):
         try:
-            self.lifxGroup.set_power(True, rapid = False)
+            self.lifxGroup.set_power(True, rapid = True)
         except (lifxlan.WorkflowException, IOError) as ex:
             LOGGER.error('group seton error caught %s', str(ex))
         else:
@@ -952,7 +952,7 @@ class Group(polyinterface.Node):
 
     def setOff(self, command):
         try:
-            self.lifxGroup.set_power(False, rapid = False)
+            self.lifxGroup.set_power(False, rapid = True)
         except (lifxlan.WorkflowException, IOError) as e:
             LOGGER.error('group setoff error caught {}'.format(str(e)))
         else:
@@ -961,7 +961,7 @@ class Group(polyinterface.Node):
     def setColor(self, command):
         _color = int(command.get('value'))
         try:
-            self.lifxGroup.set_color(COLORS[_color][1], 0, rapid = False)
+            self.lifxGroup.set_color(COLORS[_color][1], 0, rapid = True)
         except (lifxlan.WorkflowException, IOError) as ex:
             LOGGER.error('group setcolor error caught %s', str(ex))
         else:
@@ -976,7 +976,7 @@ class Group(polyinterface.Node):
             duration = 0
 
         try:
-            self.lifxGroup.set_color(color, duration = duration, rapid = False)
+            self.lifxGroup.set_color(color, duration = duration, rapid = True)
         except (lifxlan.WorkflowException, IOError) as ex:
             LOGGER.error('group sethsbkd error caught {}'.format(str(ex)))
         else:
