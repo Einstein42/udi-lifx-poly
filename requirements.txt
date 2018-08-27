@@ -1,2 +1,2 @@
-lifxlan>=1.2.3
-polyinterface>=2.0.26
+lifxlan>=1.2.5
+polyinterface>=2.0.28

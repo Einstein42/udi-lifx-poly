@@ -967,6 +967,51 @@ class Group(polyinterface.Node):
         else:
             LOGGER.info('Received SetColor command for group {} from ISY. Changing color to: {} for all {} members.'.format(self.name, COLORS[_color][0], self.numMembers))
 
+    def setHue(self, command):
+        _hue = int(command.get('value'))
+        try:
+            self.lifxGroup.set_hue(_hue, 0, rapid = True)
+        except (lifxlan.WorkflowException, IOError) as ex:
+            LOGGER.error('group sethue error caught %s', str(ex))
+        else:
+            LOGGER.info('Received SetHue command for group {} from ISY. Changing hue to: {} for all {} members.'.format(self.name, _hue, self.numMembers))
+
+    def setSat(self, command):
+        _sat = int(command.get('value'))
+        try:
+            self.lifxGroup.set_saturation(_sat, 0, rapid = True)
+        except (lifxlan.WorkflowException, IOError) as ex:
+            LOGGER.error('group setsaturation error caught %s', str(ex))
+        else:
+            LOGGER.info('Received SetSat command for group {} from ISY. Changing saturation to: {} for all {} members.'.format(self.name, _sat, self.numMembers))
+
+    def setBri(self, command):
+        _bri = int(command.get('value'))
+        try:
+            self.lifxGroup.set_brightness(_bri, 0, rapid = True)
+        except (lifxlan.WorkflowException, IOError) as ex:
+            LOGGER.error('group setbrightness error caught %s', str(ex))
+        else:
+            LOGGER.info('Received SetBri command for group {} from ISY. Changing brightness to: {} for all {} members.'.format(self.name, _bri, self.numMembers))
+
+    def setCTemp(self, command):
+        _ctemp = int(command.get('value'))
+        try:
+            self.lifxGroup.set_colortemp(_ctemp, 0, rapid = True)
+        except (lifxlan.WorkflowException, IOError) as ex:
+            LOGGER.error('group setcolortemp error caught %s', str(ex))
+        else:
+            LOGGER.info('Received SetCTemp command for group {} from ISY. Changing color temperature to: {} for all {} members.'.format(self.name, _ctemp, self.numMembers))
+
+    def set_ir_brightness(self, command):
+        _val = int(command.get('value'))
+        try:
+            self.lifxGroup.set_infrared(_val)
+        except (lifxlan.WorkflowException, IOError) as ex:
+            LOGGER.error('group set_infrared_brightness error caught %s', str(ex))
+        else:
+            LOGGER.info('Received SetIR command for group {} from ISY. Changing infrared brightness to: {} for all {} members.'.format(self.name, _val, self.numMembers))
+
     def setHSBKD(self, command):
         query = command.get('query')
         try:
@@ -986,7 +1031,10 @@ class Group(polyinterface.Node):
 
     commands = {
                     'DON': setOn, 'DOF': setOff, 'QUERY': query,
-                    'SET_COLOR': setColor, 'SET_HSBKD': setHSBKD
+                    'SET_COLOR': setColor, 'SET_HSBKD': setHSBKD,
+                    'SETH': setHue, 'SETS': setSat, 'SETB': setBri,
+                    'CLITEMP': setCTemp, 'DFON': setOn, 'DFOF': setOff,
+                    'SETIR': set_ir_brightness
                 }
 
     id = 'lifxgroup'

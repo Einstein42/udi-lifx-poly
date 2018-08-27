@@ -242,6 +242,9 @@
             <accepts>
                 <cmd id="DON" />
                 <cmd id="DOF" />
+                <cmd id="DFON" />
+                <cmd id="DFOF" />
+                <cmd id="QUERY" />
                 <cmd id="SET_COLOR">
                    <p id="" editor="lifxchoice" />
                 </cmd>
@@ -251,6 +254,21 @@
                     <p id="B" editor="lifxclr" />
                     <p id="K" editor="lifxkelvin" />
                     <p id="D" editor="lifxduration" optional="True" />
+                </cmd>
+                <cmd id="SETH">
+                    <p id="" editor="lifxclr" />
+                </cmd>
+                <cmd id="SETS">
+                    <p id="" editor="lifxclr" />
+                </cmd>
+                <cmd id="SETB">
+                    <p id="" editor="lifxclr" />
+                </cmd>
+                <cmd id="CLITEMP">
+                    <p id="" editor="lifxkelvin" />
+                </cmd>
+                <cmd id="SETIR">
+                    <p id="" editor="lifxclr" />
                 </cmd>
             </accepts>
         </cmds>
