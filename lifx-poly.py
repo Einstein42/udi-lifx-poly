@@ -482,6 +482,7 @@ class Light(polyinterface.Node):
                 driver = ['RR', self.duration]
             try:
                 self.device.set_color(self.color, self.duration, rapid=False)
+                self.device.set_power(True)
             except lifxlan.WorkflowException as ex:
                 LOGGER.error('Connection Error on setting {} bulb {}. This happens from time to time, normally safe to ignore. {}'.format(self.name, _cmd, str(ex)))
             LOGGER.info('Received manual change, updating the bulb to: {} duration: {}'.format(str(self.color), self.duration))
@@ -504,6 +505,7 @@ class Light(polyinterface.Node):
         for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
             self.setDriver(driver, self.color[ind])
         self.setDriver('RR', self.duration)
+        self.device.set_power(True)
 
     def set_ir_brightness(self, command):
         _val = int(command.get('value'))
