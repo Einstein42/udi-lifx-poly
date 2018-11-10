@@ -209,7 +209,7 @@ class Controller(polyinterface.Controller):
         except lifxlan.WorkflowException as ex:
                 LOGGER.error('Connection Error on setting all bulb color: {}'.format(str(ex)))
 
-    drivers = [{'driver': 'ST', 'value': 0, 'uom': 2},
+    drivers = [{'driver': 'ST', 'value': 1, 'uom': 2},
                {'driver': 'GV0', 'value': 0, 'uom': 56}
               ]
 
