@@ -56,9 +56,13 @@ class Controller(polyinterface.Controller):
         self.name = 'LiFX Controller'
         self.discovery_thread = None
         self.update_nodes = False
+        self.change_pon = True
 
     def start(self):
         LOGGER.info('Starting LiFX Polyglot v2 NodeServer version {}, LiFX LAN: {}'.format(VERSION, lifxlan.__version__))
+        if 'change_no_pon' in self.polyConfig['customParams']:
+            LOGGER.debug('Change of color won\'t power bulbs on')
+            self.change_pon = False
         self._checkProfile()
         self.discover()
         LOGGER.debug('Start complete')
@@ -312,6 +316,17 @@ class Light(polyinterface.Node):
     def _bri_to_percent(self, bri):
         return float(round(bri*100/65535, 4))
 
+    def _power_on_change(self):
+        if not self.controller.change_pon or self.power:
+            return
+        try:
+            self.device.set_power(True)
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Connection Error on setting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+        else:
+            self.power = True
+            self.setDriver('ST', self._bri_to_percent(self.color[2]))
+
     def setOn(self, command):
         cmd = command.get('cmd')
         val = command.get('value')
@@ -458,6 +473,7 @@ class Light(polyinterface.Node):
             LOGGER.info('Received SetColor command from ISY. Changing color to: {}'.format(COLORS[_color][0]))
             for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
                 self.setDriver(driver, COLORS[_color][1][ind])
+            self._power_on_change()
         else:
             LOGGER.error('Received SetColor, however the bulb is in a disconnected state... ignoring')
 
@@ -487,6 +503,7 @@ class Light(polyinterface.Node):
             LOGGER.info('Received manual change, updating the bulb to: {} duration: {}'.format(str(self.color), self.duration))
             if driver:
                 self.setDriver(driver[0], driver[1])
+            self._power_on_change()
         else: LOGGER.info('Received manual change, however the bulb is in a disconnected state... ignoring')
 
     def setHSBKD(self, command):
@@ -503,6 +520,7 @@ class Light(polyinterface.Node):
                 LOGGER.error('Connection Error on setting {} bulb color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
             self.setDriver(driver, self.color[ind])
+        self._power_on_change()
         self.setDriver('RR', self.duration)
 
     def set_ir_brightness(self, command):
