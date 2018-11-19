@@ -57,12 +57,16 @@ class Controller(polyinterface.Controller):
         self.discovery_thread = None
         self.update_nodes = False
         self.change_pon = True
+        self.ignore_second_on = False
 
     def start(self):
         LOGGER.info('Starting LiFX Polyglot v2 NodeServer version {}, LiFX LAN: {}'.format(VERSION, lifxlan.__version__))
         if 'change_no_pon' in self.polyConfig['customParams']:
             LOGGER.debug('Change of color won\'t power bulbs on')
             self.change_pon = False
+        if 'ignore_second_on' in self.polyConfig['customParams']:
+            LOGGER.debug('DON will be ignored if already on')
+            self.ignore_second_on = True
         self._checkProfile()
         self.discover()
         LOGGER.debug('Start complete')
@@ -341,6 +345,9 @@ class Light(polyinterface.Node):
             elif new_bri < BR_MIN:
                 new_bri = BR_MIN
             trans = self.duration
+        elif self.power and self.controller.ignore_second_on:
+            LOGGER.info('{} is already On, ignoring DON'.format(self.name))
+            return
         elif self.power and self.color[2] != BR_MAX:
             new_bri = BR_MAX
             trans = self.duration
