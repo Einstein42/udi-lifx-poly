@@ -58,6 +58,7 @@ class Controller(polyinterface.Controller):
         self.update_nodes = False
         self.change_pon = True
         self.ignore_second_on = False
+        self.bulbs_found = 0
 
     def start(self):
         LOGGER.info('Starting LiFX Polyglot v2 NodeServer version {}, LiFX LAN: {}'.format(VERSION, lifxlan.__version__))
@@ -131,21 +132,13 @@ class Controller(polyinterface.Controller):
         LOGGER.info('Starting LiFX Discovery thread...')
         try:
             devices = self.lifxLan.get_lights()
-            bulbs_found = len(devices)
-            LOGGER.info('{} bulbs found. Checking status and adding to ISY if necessary.'.format(bulbs_found))
-            try:
-                old_bulbs_found = int(self.getDriver('GV0'))
-            except:
-                old_bulbs_found = bulbs_found
-            else:
-                if bulbs_found != old_bulbs_found:
-                    LOGGER.info('NOTICE: Bulb count {} is different, was {} previously'.format(bulbs_found, old_bulbs_found))
-            self.setDriver('GV0', bulbs_found)
+            LOGGER.info('{} bulbs found. Checking status and adding to ISY if necessary.'.format(len(devices)))
             for d in devices:
                 label = str(d.get_label())
                 name = 'LIFX {}'.format(label)
                 address = d.get_mac_addr().replace(':', '').lower()
                 if not address in self.nodes:
+                    self.bulbs_found += 1
                     if d.supports_multizone():
                         LOGGER.info('Found MultiZone Bulb: {}({})'.format(name, address))
                         self.addNode(MultiZone(self, self.address, address, name, d, label), update = self.update_nodes)
@@ -160,6 +153,14 @@ class Controller(polyinterface.Controller):
         except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
             LOGGER.error('discovery Error: {}'.format(ex))
         self.update_nodes = False
+        try:
+            old_bulbs_found = int(self.getDriver('GV0'))
+        except:
+            old_bulbs_found = self.bulbs_found
+        else:
+            if self.bulbs_found != old_bulbs_found:
+                LOGGER.info('NOTICE: Bulb count {} is different, was {} previously'.format(self.bulbs_found, old_bulbs_found))
+        self.setDriver('GV0', self.bulbs_found)
         LOGGER.info('LiFX Discovery thread is complete.')
 
     def all_on(self, command):
