@@ -655,7 +655,7 @@ class Light(polyinterface.Node):
 
 class MultiZone(Light):
     def __init__(self, controller, primary, address, name, dev):
-        super().__init__(controller, primary, address, name)
+        super().__init__(controller, primary, address, name, dev)
         self.num_zones = 0
         self.current_zone = 0
         self.new_color = None
