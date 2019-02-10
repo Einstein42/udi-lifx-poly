@@ -11,6 +11,7 @@ import sys
 import lifxlan
 from copy import deepcopy
 import json
+import yaml
 from threading import Thread
 from pathlib import Path
 
@@ -128,8 +129,71 @@ class Controller(polyinterface.Controller):
         self.discovery_thread = Thread(target=self._discovery_process)
         self.discovery_thread.start()
 
+    def _manual_discovery(self):
+        try:
+            f = open(self.polyConfig['customParams']['devlist'])
+        except Exception as ex:
+            LOGGER.error('Failed to open {}: {}'.format(self.polyConfig['customParams']['devlist'], ex))
+            return False
+        try:
+            data = yaml.safe_load(f.read())
+            f.close()
+        except Exception as ex:
+            LOGGER.error('Failed to parse {} content: {}'.format(self.polyConfig['customParams']['devlist'], ex))
+            return False
+
+        for b in data['bulbs']:
+            name = b['name']
+            address = b['mac'].replace(':', '').lower()
+            mac = b['mac']
+            ip = b['ip']
+            if not address in self.nodes:
+                self.bulbs_found += 1
+                if b['type'] == 'multizone':
+                    d = lifxlan.MultiZoneLight(mac, ip)
+                    ''' Save object reference if we need it for group membership '''
+                    b['object'] = d
+                    LOGGER.info('Found MultiZone Bulb: {}({})'.format(name, address))
+                    self.addNode(MultiZone(self, self.address, address, name, d), update = self.update_nodes)
+                else:
+                    d = lifxlan.Light(mac, ip)
+                    ''' Save object reference if we need it for group membership '''
+                    b['object'] = d
+                    LOGGER.info('Found Bulb: {}({})'.format(name, address))
+                    self.addNode(Light(self, self.address, address, name, d), update = self.update_nodes)
+
+        for grp in data['groups']:
+            members = []
+            for member_light in grp['members']:
+                light_found = False
+                for b in data['bulbs']:
+                    if b['name'] == member_light:
+                        members.append(b['object'])
+                        light_found = True
+                        break
+                if not light_found:
+                    LOGGER.error('Group {} light {} is not found'.format(grp['name'], member_light))
+            LOGGER.info('Group {}, {} members'.format(grp['name'], len(members)))
+            if len(members) > 0:
+                gaddress = grp['address']
+                glabel = grp['name']
+                if not gaddress in self.nodes:
+                    LOGGER.info('Found LiFX Group: {}'.format(glabel))
+                    grp = lifxlan.Group(members)
+                    self.addNode(Group(self, self.address, gaddress, glabel, grp), update = self.update_nodes)
+
+        self.setDriver('GV0', self.bulbs_found)
+        return True
+
     def _discovery_process(self):
         LOGGER.info('Starting LiFX Discovery thread...')
+        if 'devlist' in self.polyConfig['customParams']:
+            LOGGER.info('Attempting manual discovery...')
+            if self._manual_discovery():
+                LOGGER.info('Manual discovery is complete')
+                return
+            else:
+                LOGGER.error('Manual discovery failed')
         try:
             devices = self.lifxLan.get_lights()
             LOGGER.info('{} bulbs found. Checking status and adding to ISY if necessary.'.format(len(devices)))
@@ -141,15 +205,15 @@ class Controller(polyinterface.Controller):
                     self.bulbs_found += 1
                     if d.supports_multizone():
                         LOGGER.info('Found MultiZone Bulb: {}({})'.format(name, address))
-                        self.addNode(MultiZone(self, self.address, address, name, d, label), update = self.update_nodes)
+                        self.addNode(MultiZone(self, self.address, address, name, d), update = self.update_nodes)
                     else:
                         LOGGER.info('Found Bulb: {}({})'.format(name, address))
-                        self.addNode(Light(self, self.address, address, name, d, label), update = self.update_nodes)
+                        self.addNode(Light(self, self.address, address, name, d), update = self.update_nodes)
                 gid, glabel, gupdatedat = d.get_group_tuple()
                 gaddress = glabel.replace("'", "").replace(' ', '').lower()[:12]
                 if not gaddress in self.nodes:
                     LOGGER.info('Found LiFX Group: {}'.format(glabel))
-                    self.addNode(Group(self, self.address, gaddress, gid, glabel, gupdatedat), update = self.update_nodes)
+                    self.addNode(Group(self, self.address, gaddress, glabel), update = self.update_nodes)
         except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
             LOGGER.error('discovery Error: {}'.format(ex))
         self.update_nodes = False
@@ -229,12 +293,11 @@ class Light(polyinterface.Node):
     """
     LiFX Light Parent Class
     """
-    def __init__(self, controller, primary, address, name, dev, label):
+    def __init__(self, controller, primary, address, name, dev):
         super().__init__(controller, primary, address, name)
         self.device = dev
         self.name = name
         self.power = False
-        self.label = label
         self.connected = 1
         self.uptime = 0
         self.color= []
@@ -591,8 +654,8 @@ class Light(polyinterface.Node):
                 }
 
 class MultiZone(Light):
-    def __init__(self, controller, primary, address, name, dev, label):
-        super().__init__(controller, primary, address, name, dev, label)
+    def __init__(self, controller, primary, address, name, dev):
+        super().__init__(controller, primary, address, name)
         self.num_zones = 0
         self.current_zone = 0
         self.new_color = None
@@ -946,11 +1009,14 @@ class Group(polyinterface.Node):
     """
     LiFX Group Node Class
     """
-    def __init__(self, controller, primary, address, gid, label, gupdatedat):
+    def __init__(self, controller, primary, address, label, grp=None):
         self.label = label.replace("'", "")
         super().__init__(controller, primary, address, 'LIFX Group ' + str(label))
         self.lifxLabel = label
-        self.lifxGroup = self.controller.lifxLan.get_devices_by_group(label)
+        if grp:
+            self.lifxGroup = grp
+        else:
+            self.lifxGroup = self.controller.lifxLan.get_devices_by_group(label)
         self.numMembers = len(self.lifxGroup.devices)
 
     def start(self):
