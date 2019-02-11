@@ -142,6 +142,10 @@ class Controller(polyinterface.Controller):
             LOGGER.error('Failed to parse {} content: {}'.format(self.polyConfig['customParams']['devlist'], ex))
             return False
 
+        if 'bulbs' not in data:
+            LOGGER.error('Manual discovery file {} is missing bulbs section'.format(self.polyConfig['customParams']['devlist']))
+            return False
+
         for b in data['bulbs']:
             name = b['name']
             address = b['mac'].replace(':', '').lower()
@@ -161,6 +165,11 @@ class Controller(polyinterface.Controller):
                     b['object'] = d
                     LOGGER.info('Found Bulb: {}({})'.format(name, address))
                     self.addNode(Light(self, self.address, address, name, d), update = self.update_nodes)
+        self.setDriver('GV0', self.bulbs_found)
+
+        if 'groups' not in data:
+            LOGGER.info('Manual discovery file {} is missing groups section'.format(self.polyConfig['customParams']['devlist']))
+            return True
 
         for grp in data['groups']:
             members = []
@@ -181,8 +190,6 @@ class Controller(polyinterface.Controller):
                     LOGGER.info('Found LiFX Group: {}'.format(glabel))
                     grp = lifxlan.Group(members)
                     self.addNode(Group(self, self.address, gaddress, glabel, grp), update = self.update_nodes)
-
-        self.setDriver('GV0', self.bulbs_found)
         return True
 
     def _discovery_process(self):
