@@ -14,6 +14,7 @@ import json
 import yaml
 from threading import Thread
 from pathlib import Path
+import math
 
 
 LOGGER = polyinterface.LOGGER
@@ -375,12 +376,12 @@ class Light(polyinterface.Node):
         else:
             self.setDriver('GV7', 0)
         try:
-            wifi_signal = self.device.get_wifi_signal_mw()
+            wifi_signal = math.floor(10 * math.log10(self.device.get_wifi_signal_mw()) + 0.5)
         except (lifxlan.WorkflowException, OSError) as ex:
             LOGGER.error('Connection Error on getting {} bulb WiFi signal strength. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
             connected = 1
-            self.setDriver('GV0', round(wifi_signal, 1))
+            self.setDriver('GV0', wifi_signal)
         self.connected = connected
         self.setDriver('GV5', self.connected)
         self.lastupdate = time.time()

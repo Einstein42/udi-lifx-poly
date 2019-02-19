@@ -15,7 +15,7 @@ ND-lifxcolor-NAME = LIFX Color Bulb
 ND-lifxcolor-ICON = Lamp
 
 ST-ST-NAME = Status
-ST-GV0-NAME = WiFi Signal (mW)
+ST-GV0-NAME = WiFi Signal (RSSI/SNR)
 ST-GV1-NAME = Hue
 ST-GV2-NAME = Saturation
 ST-GV3-NAME = Brightness

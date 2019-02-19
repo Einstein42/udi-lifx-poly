@@ -33,7 +33,7 @@
     </editor>
     <!-- LIFX WiFi Signal Level -->
     <editor id="lifxwifi">
-        <range uom="56" min="0" max="100" prec="1" />
+        <range uom="56" min="-100" max="200" prec="1" />
     </editor>
     <!-- LIFX Duty Cycle -->
     <editor id="lifxduty">
