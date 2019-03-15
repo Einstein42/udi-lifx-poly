@@ -1042,6 +1042,14 @@ class Group(polyinterface.Node):
         self.update()
         self.reportDrivers()
 
+    def _power_on_change(self):
+        if not self.controller.change_pon:
+            return
+        try:
+            self.lifxGroup.set_power(True,rapid=True)
+        except lifxlan.WorkflowException as ex:
+            LOGGER.error('Error on setting {} power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+
     def setOn(self, command):
         try:
             self.lifxGroup.set_power(True, rapid = True)
@@ -1066,6 +1074,7 @@ class Group(polyinterface.Node):
             LOGGER.error('group setcolor error caught %s', str(ex))
         else:
             LOGGER.info('Received SetColor command for group {} from ISY. Changing color to: {} for all {} members.'.format(self.name, COLORS[_color][0], self.numMembers))
+            self._power_on_change()
 
     def setHue(self, command):
         _hue = int(command.get('value'))
@@ -1075,6 +1084,7 @@ class Group(polyinterface.Node):
             LOGGER.error('group sethue error caught %s', str(ex))
         else:
             LOGGER.info('Received SetHue command for group {} from ISY. Changing hue to: {} for all {} members.'.format(self.name, _hue, self.numMembers))
+            self._power_on_change()
 
     def setSat(self, command):
         _sat = int(command.get('value'))
@@ -1084,6 +1094,7 @@ class Group(polyinterface.Node):
             LOGGER.error('group setsaturation error caught %s', str(ex))
         else:
             LOGGER.info('Received SetSat command for group {} from ISY. Changing saturation to: {} for all {} members.'.format(self.name, _sat, self.numMembers))
+            self._power_on_change()
 
     def setBri(self, command):
         _bri = int(command.get('value'))
@@ -1093,6 +1104,7 @@ class Group(polyinterface.Node):
             LOGGER.error('group setbrightness error caught %s', str(ex))
         else:
             LOGGER.info('Received SetBri command for group {} from ISY. Changing brightness to: {} for all {} members.'.format(self.name, _bri, self.numMembers))
+            self._power_on_change()
 
     def setCTemp(self, command):
         _ctemp = int(command.get('value'))
@@ -1102,6 +1114,7 @@ class Group(polyinterface.Node):
             LOGGER.error('group setcolortemp error caught %s', str(ex))
         else:
             LOGGER.info('Received SetCTemp command for group {} from ISY. Changing color temperature to: {} for all {} members.'.format(self.name, _ctemp, self.numMembers))
+            self._power_on_change()
 
     def set_ir_brightness(self, command):
         _val = int(command.get('value'))
@@ -1111,6 +1124,7 @@ class Group(polyinterface.Node):
             LOGGER.error('group set_infrared_brightness error caught %s', str(ex))
         else:
             LOGGER.info('Received SetIR command for group {} from ISY. Changing infrared brightness to: {} for all {} members.'.format(self.name, _val, self.numMembers))
+            self._power_on_change()
 
     def setHSBKD(self, command):
         query = command.get('query')
@@ -1126,6 +1140,7 @@ class Group(polyinterface.Node):
             LOGGER.error('group sethsbkd error caught {}'.format(str(ex)))
         else:
             LOGGER.info('Recieved SetHSBKD command for group {} from ISY, Setting all members to Color {}, duration {}'.format(self.label, color, duration))
+            self._power_on_change()
 
     drivers = [{'driver': 'ST', 'value': 0, 'uom': 56}]
 
