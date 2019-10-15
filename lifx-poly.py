@@ -97,7 +97,7 @@ class Controller(polyinterface.Controller):
 
     def shortPoll(self):
         if self.discovery_thread is not None:
-            if self.discovery_thread.isAlive():
+            if self.discovery_thread.is_alive():
                 LOGGER.debug('Skipping shortPoll() while discovery in progress...')
                 return
             else:
@@ -107,7 +107,7 @@ class Controller(polyinterface.Controller):
 
     def longPoll(self):
         if self.discovery_thread is not None:
-            if self.discovery_thread.isAlive():
+            if self.discovery_thread.is_alive():
                 LOGGER.debug('Skipping longPoll() while discovery in progress...')
                 return
             else:
@@ -124,7 +124,7 @@ class Controller(polyinterface.Controller):
     def discover(self, command=None):
         self.lifxLan = lifxlan.LifxLAN()
         if self.discovery_thread is not None:
-            if self.discovery_thread.isAlive():
+            if self.discovery_thread.is_alive():
                 LOGGER.info('Discovery is still in progress')
                 return
         self.discovery_thread = Thread(target=self._discovery_process)
