@@ -160,12 +160,20 @@ class Controller(polyinterface.Controller):
                     b['object'] = d
                     LOGGER.info('Found MultiZone Bulb: {}({})'.format(name, address))
                     self.addNode(MultiZone(self, self.address, address, name, d), update = self.update_nodes)
-                else:
+                elif b['type'] == 'bulb':
                     d = lifxlan.Light(mac, ip)
                     ''' Save object reference if we need it for group membership '''
                     b['object'] = d
                     LOGGER.info('Found Bulb: {}({})'.format(name, address))
                     self.addNode(Light(self, self.address, address, name, d), update = self.update_nodes)
+                elif b['type'] == 'tile':
+                    d = lifxlan.TileChain(mac, ip)
+                    ''' Save object reference if we need it for group membership '''
+                    b['object'] = d
+                    LOGGER.info('Found Tile: {}({})'.format(name, address))
+                    self.addNode(Tile(self, self.address, address, name, d), update = self.update_nodes)
+                else:
+                    LOGGER.error('Unknown type: {}'.format(b['type']))
         self.setDriver('GV0', self.bulbs_found)
 
         if 'groups' not in data:
@@ -1011,6 +1019,60 @@ class MultiZone(Light):
                 {'driver': 'RR', 'value': 0, 'uom': 42}]
 
     id = 'lifxmultizone'
+
+
+class Tile(Light):
+    """
+    LiFX Light Parent Class
+    """
+    def set_tile_effect(self, command):
+        query = command.get('query')
+        effect_type = int(query.get('EF.uom25'))
+        if effect_type < 0 or effect_type > 2:
+            LOGGER.error('Invalid effect type requested')
+            return
+        ''' 0 - No effect, 1 - Reserved, 2 - Morph, 3 - Flame '''
+        ''' However we skip 1 in the NodeDef '''
+        if effect_type > 0:
+            effect_type += 1
+        if effect_type == 2:
+            palette = [(0, 65535, 65535, 3500), (7281, 65535, 65535, 3500), (10922, 65535, 65535, 3500), (22209, 65535, 65535, 3500),
+                       (43507, 65535, 65535, 3500), (49333, 65535, 65535, 3500), (53520, 65535, 65535, 3500)]
+        else:
+            palette = []
+        effect_speed = int(query.get('ES.uom42'))
+        ''' Tile needs effect duration in nanoseconds so multiply by 2*10^6 '''
+        effect_duration = int(query.get('ED.uom42'))*1000000
+        try:
+            self.device.set_tile_effect(effect_type=effect_type, speed=effect_speed, duration=effect_duration, palette=palette)
+        except (lifxlan.WorkflowException, TypeError) as ex:
+            LOGGER.error('set_tile_effect error {}'.format(ex))
+
+    drivers = [{'driver': 'ST', 'value': 0, 'uom': 51},
+                {'driver': 'GV0', 'value': 0, 'uom': 56},
+                {'driver': 'GV1', 'value': 0, 'uom': 56},
+                {'driver': 'GV2', 'value': 0, 'uom': 56},
+                {'driver': 'GV3', 'value': 0, 'uom': 56},
+                {'driver': 'CLITEMP', 'value': 0, 'uom': 26},
+                {'driver': 'GV5', 'value': 0, 'uom': 2},
+                {'driver': 'GV6', 'value': 0, 'uom': 20},
+                {'driver': 'GV7', 'value': 0, 'uom': 56},
+                {'driver': 'RR', 'value': 0, 'uom': 42}]
+
+    id = 'lifxtile'
+
+    commands = {
+                    'DON': Light.setOn, 'DOF': Light.setOff, 'QUERY': Light.query,
+                    'SET_COLOR': Light.setColor, 'SETH': Light.setManual,
+                    'SETS': Light.setManual, 'SETB': Light.setManual,
+                    'CLITEMP': Light.setManual,
+                    'RR': Light.setManual, 'SET_HSBKD': Light.setHSBKD,
+                    'BRT': Light.brighten, 'DIM': Light.dim, 'FDUP': Light.fade_up,
+                    'FDDOWN': Light.fade_down, 'FDSTOP': Light.fade_stop,
+                    'DFON': Light.setOn, 'DFOF': Light.setOff,
+                    'SETIR': Light.set_ir_brightness, 'WAVEFORM': Light.set_wf,
+                    'EFFECT': set_tile_effect
+                }
 
 
 class Group(polyinterface.Node):

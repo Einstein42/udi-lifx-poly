@@ -14,6 +14,10 @@ ST-ctl-GV0-NAME = Bulbs discovered
 ND-lifxcolor-NAME = LIFX Color Bulb
 ND-lifxcolor-ICON = Lamp
 
+# Tile
+ND-lifxtile-NAME = LIFX Tile
+ND-lifxtile-ICON = Lamp
+
 ST-ST-NAME = Status
 ST-GV0-NAME = WiFi Signal (RSSI/SNR)
 ST-GV1-NAME = Hue
@@ -81,7 +85,9 @@ CMDP-PE-NAME = Period
 CMDP-CY-NAME = Cycles
 CMDP-DC-NAME = Duty Cycle
 CMDP-WF-NAME = Waveform
-
+CMDP-EF-NAME = Effect
+CMDP-ES-NAME = Effect Speed
+CMDP-ED-NAME = Effect Duration
 
 # White Bulbs
 ND-lifxwhite-NAME = LIFX Color Bulb
@@ -104,3 +110,4 @@ CMD-lifxmz-APPLY-NAME = Apply
 PGM-CMD-SET_HSBKD-FMT = /H// Hue ${v}/ /S// Saturation ${v}/ /B// Brightness ${v}/ /K// Color Temp ${v}/ /D// in ${v}/
 PGM-CMD-SET_HSBKDZ-FMT = /Z// Zone ${v}/ /H// Hue ${v}/ /S// Saturation ${v}/ /B// Brightness ${v}/ /K// Color Temp ${v}/ /D// in ${v}/
 PGM-CMD-WAVEFORM-FMT = /WF// ${v}/ /CY// ${v} cycles/ /PE// ${v} each,/ /DC// duty cycle ${v}/ /H// Hue ${v}/ /S// Saturation ${v}/ /B// Brightness ${v}/ /K// Color Temp ${v}/
+PGM-CMD-EFFECT-FMT = /EF// Effect ${v}/ /ES// Speed ${v}/ /ED// Duration ${v}/

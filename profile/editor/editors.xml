@@ -43,4 +43,12 @@
     <editor id="lifxwave">
         <range uom="25" subset="0-9" nls="WF_CHOICE" />
     </editor>
+    <!-- LiFX Effect -->
+    <editor id="lifxtef">
+        <range uom="25" subset="0-2" nls="TEFF_CH" />
+    </editor>
+    <!-- LiFX Effect Speed / Duration -->
+    <editor id="lifxes">
+        <range uom="42" min="0" max="4294967296" prec="0" step="1" />
+    </editor>
 </editors>
