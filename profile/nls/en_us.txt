@@ -53,6 +53,9 @@ WF_CHOICE-7 = Transient HalfSine
 WF_CHOICE-8 = Transient Triangle
 WF_CHOICE-9 = Transient Pulse
 
+TEFF_CH-0 = None
+TEFF_CH-1 = Morph
+TEFF_CH-2 = Flame
 
 #Generic for all Types
 CMD-DON-NAME = On
@@ -74,6 +77,7 @@ CMD-RR-NAME = Set Transition Time
 CMD-SET_HSBKD-NAME = Change HSBKD
 CMD-SET_COLOR-NAME = Set Color To
 CMD-WAVEFORM-NAME = Run Waveform
+CMD-EFFECT-NAME = Effect
 
 CMDP-H-NAME = Hue
 CMDP-S-NAME = Saturation
