@@ -366,14 +366,16 @@ class Light(polyinterface.Node):
 
     def long_update(self):
         connected = 0
+        ir_support = False
         try:
             self.uptime = self._nanosec_to_hours(self.device.get_uptime())
+            ir_support = self.device.supports_infrared()
         except (lifxlan.WorkflowException, OSError) as ex:
             LOGGER.error('Connection Error on getting {} bulb uptime. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
             connected = 1
             self.setDriver('GV6', self.uptime)
-        if self.device.supports_infrared():
+        if ir_support:
             try:
                 ir_brightness = self.device.get_infrared()
             except (lifxlan.WorkflowException, OSError) as ex:
@@ -611,8 +613,14 @@ class Light(polyinterface.Node):
         self.setDriver('RR', self.duration)
 
     def set_ir_brightness(self, command):
+        ir_support = False
         _val = int(command.get('value'))
-        if not self.device.supports_infrared():
+        try:
+            ir_support = self.device.supports_infrared()
+        except:
+            LOGGER.error('{} unknown IR support status'.format(self.name))
+            ir_support = False
+        if not ir_support:
             LOGGER.error('{} is not IR capable'.format(self.name))
             return
         try:
