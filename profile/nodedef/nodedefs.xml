@@ -352,6 +352,7 @@
                     <p id="EF" editor="lifxtef" init="0" />
                     <p id="ES" editor="lifxes" init="3000" />
                     <p id="ED" editor="lifxes" init="0" />
+                    <p id="B" editor="lifxclr" init="GV3" />
                 </cmd>
             </accepts>
         </cmds>

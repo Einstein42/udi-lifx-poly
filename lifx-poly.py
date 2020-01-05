@@ -1008,7 +1008,7 @@ class MultiZone(Light):
         try:
             self.device.set_multizone_effect(effect_type=effect_type, speed=effect_speed, duration=effect_duration, parameters=parameters)
         except (lifxlan.WorkflowException, TypeError) as ex:
-            LOGGER.error('set_tile_effect error {}'.format(ex))
+            LOGGER.error('set_effect error {}'.format(ex))
 
 
     commands = {
@@ -1055,8 +1055,9 @@ class Tile(Light):
         if effect_type > 0:
             effect_type += 1
         if effect_type == 2:
-            palette = [(0, 65535, 65535, 3500), (7281, 65535, 65535, 3500), (10922, 65535, 65535, 3500), (22209, 65535, 65535, 3500),
-                       (43507, 65535, 65535, 3500), (49333, 65535, 65535, 3500), (53520, 65535, 65535, 3500)]
+            brightness = int(query.get('B.uom56'))
+            palette = [(0, 65535, brightness, 3500), (7281, 65535, brightness, 3500), (10922, 65535, brightness, 3500), (22209, 65535, brightness, 3500),
+                       (43507, 65535, brightness, 3500), (49333, 65535, brightness, 3500), (53520, 65535, brightness, 3500)]
         else:
             palette = []
         effect_speed = int(query.get('ES.uom42'))

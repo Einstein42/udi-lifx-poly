@@ -119,4 +119,4 @@ PGM-CMD-SET_HSBKD-FMT = /H// Hue ${v}/ /S// Saturation ${v}/ /B// Brightness ${v
 PGM-CMD-SET_HSBKDZ-FMT = /Z// Zone ${v}/ /H// Hue ${v}/ /S// Saturation ${v}/ /B// Brightness ${v}/ /K// Color Temp ${v}/ /D// in ${v}/
 PGM-CMD-WAVEFORM-FMT = /WF// ${v}/ /CY// ${v} cycles/ /PE// ${v} each,/ /DC// duty cycle ${v}/ /H// Hue ${v}/ /S// Saturation ${v}/ /B// Brightness ${v}/ /K// Color Temp ${v}/
 PGM-CMD-lifxmz-EFFECT-FMT = /EF// Effect ${v}/ /ES// Speed ${v}/ /ED// Duration ${v}/ /ER// Reverse Direction ${v}/
-PGM-CMD-lifxt-EFFECT-FMT = /EF// Effect ${v}/ /ES// Speed ${v}/ /ED// Duration ${v}/
+PGM-CMD-lifxt-EFFECT-FMT = /EF// Effect ${v}/ /ES// Speed ${v}/ /ED// Duration ${v}/ /B// Brightness ${v}/
