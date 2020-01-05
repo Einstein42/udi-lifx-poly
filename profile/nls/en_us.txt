@@ -57,6 +57,9 @@ TEFF_CH-0 = None
 TEFF_CH-1 = Morph
 TEFF_CH-2 = Flame
 
+MZEFF_CH-0 = None
+MZEFF_CH-1 = Move
+
 #Generic for all Types
 CMD-DON-NAME = On
 CMD-DOF-NAME = Off
@@ -92,6 +95,7 @@ CMDP-WF-NAME = Waveform
 CMDP-EF-NAME = Effect
 CMDP-ES-NAME = Effect Speed
 CMDP-ED-NAME = Effect Duration
+CMDP-ER-NAME = Reverse Direction
 
 # White Bulbs
 ND-lifxwhite-NAME = LIFX Color Bulb
@@ -114,4 +118,5 @@ CMD-lifxmz-APPLY-NAME = Apply
 PGM-CMD-SET_HSBKD-FMT = /H// Hue ${v}/ /S// Saturation ${v}/ /B// Brightness ${v}/ /K// Color Temp ${v}/ /D// in ${v}/
 PGM-CMD-SET_HSBKDZ-FMT = /Z// Zone ${v}/ /H// Hue ${v}/ /S// Saturation ${v}/ /B// Brightness ${v}/ /K// Color Temp ${v}/ /D// in ${v}/
 PGM-CMD-WAVEFORM-FMT = /WF// ${v}/ /CY// ${v} cycles/ /PE// ${v} each,/ /DC// duty cycle ${v}/ /H// Hue ${v}/ /S// Saturation ${v}/ /B// Brightness ${v}/ /K// Color Temp ${v}/
-PGM-CMD-EFFECT-FMT = /EF// Effect ${v}/ /ES// Speed ${v}/ /ED// Duration ${v}/
+PGM-CMD-lifxmz-EFFECT-FMT = /EF// Effect ${v}/ /ES// Speed ${v}/ /ED// Duration ${v}/ /ER// Reverse Direction ${v}/
+PGM-CMD-lifxt-EFFECT-FMT = /EF// Effect ${v}/ /ES// Speed ${v}/ /ED// Duration ${v}/

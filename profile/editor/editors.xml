@@ -43,9 +43,13 @@
     <editor id="lifxwave">
         <range uom="25" subset="0-9" nls="WF_CHOICE" />
     </editor>
-    <!-- LiFX Effect -->
+    <!-- LiFX Tile Effect -->
     <editor id="lifxtef">
         <range uom="25" subset="0-2" nls="TEFF_CH" />
+    </editor>
+    <!-- LiFX MultiZone Effect -->
+    <editor id="lifxmzef">
+        <range uom="25" subset="0-1" nls="MZEFF_CH" />
     </editor>
     <!-- LiFX Effect Speed / Duration -->
     <editor id="lifxes">

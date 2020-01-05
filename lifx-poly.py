@@ -994,6 +994,23 @@ class MultiZone(Light):
         except (lifxlan.WorkflowException, IOError) as ex:
             LOGGER.error('set mz hsbkdz error %s', str(ex))
 
+    def set_effect(self, command):
+        query = command.get('query')
+        effect_type = int(query.get('EF.uom25'))
+        if effect_type < 0 or effect_type > 1:
+            LOGGER.error('Invalid effect type requested')
+            return
+        ''' 0 - No effect, 1 - Move '''
+        effect_speed = int(query.get('ES.uom42'))
+        ''' needs effect duration in nanoseconds so multiply by 2*10^6 '''
+        effect_duration = int(query.get('ED.uom42'))*1000000
+        parameters = [ 0, int(query.get('ER.uom2')) ]
+        try:
+            self.device.set_multizone_effect(effect_type=effect_type, speed=effect_speed, duration=effect_duration, parameters=parameters)
+        except (lifxlan.WorkflowException, TypeError) as ex:
+            LOGGER.error('set_tile_effect error {}'.format(ex))
+
+
     commands = {
                     'DON': setOn, 'DOF': Light.setOff,
                     'APPLY': apply, 'QUERY': Light.query,
@@ -1005,7 +1022,7 @@ class MultiZone(Light):
                     'FDUP': fade_up, 'FDDOWN': fade_down,
                     'FDSTOP': fade_stop, 'DFON': setOn,
                     'DFOF': Light.setOff, 'SETIR': Light.set_ir_brightness,
-                    'WAVEFORM': Light.set_wf
+                    'WAVEFORM': Light.set_wf, 'EFFECT': set_effect
                 }
 
     drivers = [{'driver': 'ST', 'value': 0, 'uom': 51},
