@@ -340,6 +340,7 @@ class Light(polyinterface.Node):
             self.color = list(self.device.get_color())
         except (lifxlan.WorkflowException, OSError) as ex:
             LOGGER.error('Connection Error on getting {} bulb color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+            return
         else:
             connected = 1
             for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
@@ -354,6 +355,7 @@ class Light(polyinterface.Node):
             self.power = power_now
         except (lifxlan.WorkflowException, OSError) as ex:
             LOGGER.error('Connection Error on getting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
+            return
         else:
             connected = 1
             if self.power:
