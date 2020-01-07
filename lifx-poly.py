@@ -335,16 +335,16 @@ class Light(polyinterface.Node):
         self.reportDrivers()
 
     def update(self):
-        connected = 0
+        self.connected = 0
         try:
             self.color = list(self.device.get_color())
         except (lifxlan.WorkflowException, OSError) as ex:
             LOGGER.error('Connection Error on getting {} bulb color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
             ''' stop here as proceeding without self.color may cause exceptions '''
-            self.setDriver('GV5', connected)
+            self.setDriver('GV5', self.connected)
             return
         else:
-            connected = 1
+            self.connected = 1
             for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
                 self.setDriver(driver, self.color[ind])
         try:
@@ -358,25 +358,24 @@ class Light(polyinterface.Node):
         except (lifxlan.WorkflowException, OSError) as ex:
             LOGGER.error('Connection Error on getting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
-            connected = 1
+            self.connected = 1
             if self.power:
                 self.setDriver('ST', self._bri_to_percent(self.color[2]))
             else:
                 self.setDriver('ST', 0)
-        self.connected = connected
         self.setDriver('GV5', self.connected)
         self.setDriver('RR', self.duration)
         self.lastupdate = time.time()
 
     def long_update(self):
-        connected = 0
+        self.connected = 0
         try:
             self.uptime = self._nanosec_to_hours(self.device.get_uptime())
             self.ir_support = self.device.supports_infrared()
         except (lifxlan.WorkflowException, OSError) as ex:
             LOGGER.error('Connection Error on getting {} bulb uptime. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
-            connected = 1
+            self.connected = 1
             self.setDriver('GV6', self.uptime)
         if self.ir_support:
             try:
@@ -384,7 +383,7 @@ class Light(polyinterface.Node):
             except (lifxlan.WorkflowException, OSError) as ex:
                 LOGGER.error('Connection Error on getting {} bulb Infrared. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
             else:
-                connected = 1
+                self.connected = 1
                 self.setDriver('GV7', ir_brightness)
         else:
             self.setDriver('GV7', 0)
@@ -393,9 +392,8 @@ class Light(polyinterface.Node):
         except (lifxlan.WorkflowException, OSError, ValueError) as ex:
             LOGGER.error('Connection Error on getting {} bulb WiFi signal strength. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
-            connected = 1
+            self.connected = 1
             self.setDriver('GV0', wifi_signal)
-        self.connected = connected
         self.setDriver('GV5', self.connected)
         self.lastupdate = time.time()
 
@@ -683,7 +681,7 @@ class MultiZone(Light):
         self.pending = False
 
     def update(self):
-        connected = 0
+        self.connected = 0
         zone = deepcopy(self.current_zone)
         if self.current_zone != 0: zone -= 1
         if not self.pending:
@@ -692,7 +690,7 @@ class MultiZone(Light):
             except (lifxlan.WorkflowException, OSError) as ex:
                 LOGGER.error('Connection Error on getting {} multizone color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
             else:
-                connected = 1
+                self.connected = 1
                 self.num_zones = len(self.color)
                 for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
                     try:
@@ -711,9 +709,8 @@ class MultiZone(Light):
         except (lifxlan.WorkflowException, OSError) as ex:
             LOGGER.error('Connection Error on getting {} multizone power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
-            connected = 1
+            self.connected = 1
             self._set_st()
-        self.connected = connected
         self.setDriver('GV5', self.connected)
         self.setDriver('RR', self.duration)
         self.lastupdate = time.time()
