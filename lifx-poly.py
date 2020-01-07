@@ -212,6 +212,24 @@ class Controller(polyinterface.Controller):
                 LOGGER.error('Manual discovery failed')
         try:
             devices = self.lifxLan.get_lights()
+            if 'manual_addresses' in self.polyConfig['customParams']:
+                addresses = self.polyConfig['customParams']['manual_addresses'].split(',')
+                for idx in range( 1, len(addresses), 2 ):
+                    try:
+                        mac = addresses[idx - 1].strip()
+						ip = addresses[idx].strip()
+						LOGGER.info('Getting light at {} {}'.format( mac, ip ) )
+                        manual_device = lifxlan.Light( mac, ip )
+                        found = False
+                        for device in devices:
+                            if device.get_mac_addr() == manual_device.get_mac_addr():
+                                found = True
+                                break
+                        if found == False:
+                            LOGGER.info('Appending light at {} {}'.format( addresses[idx - 1], addresses[idx] ) )
+                            devices.append( manual_device )
+                    except (lifxlan.WorkflowException, OSError, IOError, TypeError) as ex:
+                        LOGGER.error('Manual Error: {}'.format(ex))
             LOGGER.info('{} bulbs found. Checking status and adding to ISY if necessary.'.format(len(devices)))
             for d in devices:
                 label = str(d.get_label())
