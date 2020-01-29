@@ -338,7 +338,7 @@ class Light(polyinterface.Node):
         self.connected = 0
         try:
             self.color = list(self.device.get_color())
-        except (lifxlan.WorkflowException, OSError) as ex:
+        except Exception as ex:
             LOGGER.error('Connection Error on getting {} bulb color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
             ''' stop here as proceeding without self.color may cause exceptions '''
             self.setDriver('GV5', self.connected)
@@ -355,7 +355,7 @@ class Light(polyinterface.Node):
                 else:
                     self.reportCmd('DOF')
             self.power = power_now
-        except (lifxlan.WorkflowException, OSError) as ex:
+        except Exception as ex:
             LOGGER.error('Connection Error on getting {} bulb power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
             self.connected = 1
@@ -372,7 +372,7 @@ class Light(polyinterface.Node):
         try:
             self.uptime = self._nanosec_to_hours(self.device.get_uptime())
             self.ir_support = self.device.supports_infrared()
-        except (lifxlan.WorkflowException, OSError) as ex:
+        except Exception as ex:
             LOGGER.error('Connection Error on getting {} bulb uptime. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
             self.connected = 1
@@ -380,7 +380,7 @@ class Light(polyinterface.Node):
         if self.ir_support:
             try:
                 ir_brightness = self.device.get_infrared()
-            except (lifxlan.WorkflowException, OSError) as ex:
+            except Exception as ex:
                 LOGGER.error('Connection Error on getting {} bulb Infrared. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
             else:
                 self.connected = 1
@@ -540,7 +540,7 @@ class Light(polyinterface.Node):
         # check current brightness level
         try:
             self.color = list(self.device.get_color())
-        except (lifxlan.WorkflowException, OSError) as ex:
+        except Exception as ex:
             LOGGER.error('Connection Error on getting {} bulb color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
             for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
@@ -687,7 +687,7 @@ class MultiZone(Light):
         if not self.pending:
             try:
                 self.color = self.device.get_color_zones()
-            except (lifxlan.WorkflowException, OSError) as ex:
+            except Exception as ex:
                 LOGGER.error('Connection Error on getting {} multizone color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
             else:
                 self.connected = 1
@@ -706,7 +706,7 @@ class MultiZone(Light):
                 else:
                     self.reportCmd('DOF')
             self.power = power_now
-        except (lifxlan.WorkflowException, OSError) as ex:
+        except Exception as ex:
             LOGGER.error('Connection Error on getting {} multizone power. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
             self.connected = 1
@@ -890,7 +890,7 @@ class MultiZone(Light):
         # check current brightness level
         try:
             self.color = self.device.get_color_zones()
-        except (lifxlan.WorkflowException, OSError) as ex:
+        except Exception as ex:
             LOGGER.error('Connection Error on getting {} multizone color. This happens from time to time, normally safe to ignore. {}'.format(self.name, str(ex)))
         else:
             for ind, driver in enumerate(('GV1', 'GV2', 'GV3', 'CLITEMP')):
