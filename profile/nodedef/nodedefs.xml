@@ -354,6 +354,12 @@
                     <p id="ED" editor="lifxes" init="0" />
                     <p id="B" editor="lifxclr" init="GV3" />
                 </cmd>
+		<cmd id="TILESV">
+		    <p id="" editor="tilemem" init="1" />
+		</cmd>
+		<cmd id="TILERT">
+		    <p id="" editor="tilemem" init="1" />
+		</cmd>
             </accepts>
         </cmds>
     </nodeDef>

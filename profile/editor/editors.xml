@@ -55,4 +55,7 @@
     <editor id="lifxes">
         <range uom="42" min="0" max="4294967296" prec="0" step="1" />
     </editor>
+    <editor id="tilemem">
+	<range uom="56" min="1" max="10" prec="0" step="1" />
+    </editor>
 </editors>

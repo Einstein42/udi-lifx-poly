@@ -1042,8 +1042,51 @@ class MultiZone(Light):
 
 class Tile(Light):
     """
-    LiFX Light Parent Class
+    LiFX Light is a Parent Class
     """
+    def __init__(self, controller, primary, address, name, dev):
+        super().__init__(controller, primary, address, name, dev)
+        self.tile_count = 0
+
+    def start(self):
+        try:
+            self.tile_count = self.device.get_tile_count()
+        except Exception as ex:
+            LOGGER.error(f'Failed to get tile count for {self.name}: {ex}')
+        super().start()
+
+    def save_state(self, command):
+        mem_index = str(command.get('value'))
+        custom_data = deepcopy(self.controller.polyConfig['customData'])
+        try:
+            color_array = self.device.get_tile_colors(0, self.tile_count)
+        except Exception as ex:
+            LOGGER.error(f'Failed to retrieve colors for {self.name}: {ex}')
+            return
+        ''' Create structure for color storage'''
+        if 'saved_tile_colors' not in custom_data:
+            custom_data['saved_tile_colors'] = {}
+        if self.address not in custom_data['saved_tile_colors']:
+            custom_data['saved_tile_colors'][self.address] = {}
+        custom_data['saved_tile_colors'][self.address].update({ mem_index: color_array })
+        LOGGER.debug(custom_data)
+        self.controller.saveCustomData(custom_data)
+
+    def recall_state(self, command):
+        mem_index = str(command.get('value'))
+        try:
+            color_array = self.controller.polyConfig['customData']['saved_tile_colors'][self.address][mem_index]
+        except Exception as ex:
+            LOGGER.error(f'Failed to retrieve saved tile colors {mem_index} for {self.name}: {ex}')
+            return
+        tiles_to_set = 0
+        try:
+            for color in color_array:
+                self.device.set_tile_colors(tiles_to_set, color, self.duration)
+                tiles_to_set += 1
+        except Exception as ex:
+            LOGGER.error(f'Failed to set tile colors for {self.name}: {ex}')
+
     def set_tile_effect(self, command):
         query = command.get('query')
         effect_type = int(query.get('EF.uom25'))
@@ -1091,7 +1134,7 @@ class Tile(Light):
                     'FDDOWN': Light.fade_down, 'FDSTOP': Light.fade_stop,
                     'DFON': Light.setOn, 'DFOF': Light.setOff,
                     'SETIR': Light.set_ir_brightness, 'WAVEFORM': Light.set_wf,
-                    'EFFECT': set_tile_effect
+                    'EFFECT': set_tile_effect, 'TILESV': save_state, 'TILERT': recall_state
                 }
 
 

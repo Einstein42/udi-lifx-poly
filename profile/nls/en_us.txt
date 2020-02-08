@@ -81,6 +81,8 @@ CMD-SET_HSBKD-NAME = Change HSBKD
 CMD-SET_COLOR-NAME = Set Color To
 CMD-WAVEFORM-NAME = Run Waveform
 CMD-EFFECT-NAME = Effect
+CMD-TILESV-NAME = Save tile colors
+CMD-TILERT-NAME = Recall tile colors
 
 CMDP-H-NAME = Hue
 CMDP-S-NAME = Saturation
