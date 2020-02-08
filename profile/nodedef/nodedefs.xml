@@ -292,7 +292,6 @@
             <st id="RR" editor="lifxduration" />
             <st id="GV5" editor="bool" />
             <st id="GV6" editor="lifxuptime" />
-            <st id="GV7" editor="lifxclr" />
         </sts>
         <cmds>
             <sends>
@@ -334,9 +333,6 @@
                     <p id="B" editor="lifxclr" init="GV3" />
                     <p id="K" editor="lifxkelvin" init="CLITEMP" />
                     <p id="D" editor="lifxduration" init="RR" />
-                </cmd>
-                <cmd id="SETIR">
-                    <p id="" editor="lifxclr" init="GV7"/>
                 </cmd>
                 <cmd id="WAVEFORM">
                     <p id="H" editor="lifxclr" init="GV1" />
