@@ -1069,7 +1069,6 @@ class Tile(Light):
         if self.address not in custom_data['saved_tile_colors']:
             custom_data['saved_tile_colors'][self.address] = {}
         custom_data['saved_tile_colors'][self.address].update({ mem_index: color_array })
-        LOGGER.debug(custom_data)
         self.controller.saveCustomData(custom_data)
 
     def recall_state(self, command):
