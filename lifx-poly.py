@@ -1059,7 +1059,7 @@ class Tile(Light):
         mem_index = str(command.get('value'))
         custom_data = deepcopy(self.controller.polyConfig['customData'])
         try:
-            color_array = self.device.get_tile_colors(0, self.tile_count)
+            color_array = self.device.get_tilechain_colors()
         except Exception as ex:
             LOGGER.error(f'Failed to retrieve colors for {self.name}: {ex}')
             return
@@ -1078,11 +1078,8 @@ class Tile(Light):
         except Exception as ex:
             LOGGER.error(f'Failed to retrieve saved tile colors {mem_index} for {self.name}: {ex}')
             return
-        tiles_to_set = 0
         try:
-            for color in color_array:
-                self.device.set_tile_colors(tiles_to_set, color, self.duration)
-                tiles_to_set += 1
+            self.device.set_tilechain_colors(color_array, self.duration)
         except Exception as ex:
             LOGGER.error(f'Failed to set tile colors for {self.name}: {ex}')
 
