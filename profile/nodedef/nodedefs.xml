@@ -347,7 +347,7 @@
                     <p id="WF" editor="lifxwave" />
                 </cmd>
                 <cmd id="EFFECT">
-                    <p id="EF" editor="lifxtef" init="0" />
+                    <p id="EF" editor="lifxtef" init="GV9" />
                     <p id="ES" editor="lifxes" init="3000" />
                     <p id="ED" editor="lifxes" init="0" />
                     <p id="B" editor="lifxclr" init="GV3" />
