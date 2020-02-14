@@ -27,6 +27,8 @@ ST-CLITEMP-NAME = Color Temperature
 ST-GV5-NAME = Online
 ST-GV6-NAME = Uptime
 ST-GV7-NAME = Infrared Brightness
+ST-GV8-NAME = Tiles in Chain
+ST-GV9-NAME = Effect
 ST-RR-NAME = Transition time
 
 COLOR_CHOICE-0 = Red

@@ -679,6 +679,7 @@ class MultiZone(Light):
         self.current_zone = 0
         self.new_color = None
         self.pending = False
+        self.effect = 0
 
     def update(self):
         self.connected = 0
@@ -1047,13 +1048,29 @@ class Tile(Light):
     def __init__(self, controller, primary, address, name, dev):
         super().__init__(controller, primary, address, name, dev)
         self.tile_count = 0
+        self.effect = 0
 
     def start(self):
         try:
             self.tile_count = self.device.get_tile_count()
         except Exception as ex:
             LOGGER.error(f'Failed to get tile count for {self.name}: {ex}')
+        self.setDriver('GV8', self.tile_count)
         super().start()
+
+    def update(self):
+        effect = None
+        try:
+            effect = self.device.get_tile_effect()
+        except Exception as ex:
+            LOGGER.error(f'Failed to get {self.name} effect {ex}')
+        if effect is not None:
+            if int(effect['type']) > 0:
+                self.effect = int(effect['type']) - 1
+            else:
+                self.effect = 0
+        self.setDriver('GV9', self.effect)
+        super().update()
 
     def save_state(self, command):
         mem_index = str(command.get('value'))
@@ -1072,6 +1089,14 @@ class Tile(Light):
         self.controller.saveCustomData(custom_data)
 
     def recall_state(self, command):
+        if self.effect > 0:
+            LOGGER.info(f'{self.name} is running effect, stopping effect before recall_state()')
+            try:
+                self.device.set_tile_effect(effect_type=0, speed=3000, duration=0, palette=[])
+            except Exception as ex:
+                LOGGER.error(f'Failed to stop {self.name} effect')
+            self.effect = 0
+            self.setDriver('GV9', self.effect)
         mem_index = str(command.get('value'))
         try:
             color_array = self.controller.polyConfig['customData']['saved_tile_colors'][self.address][mem_index]
@@ -1089,6 +1114,7 @@ class Tile(Light):
         if effect_type < 0 or effect_type > 2:
             LOGGER.error('Invalid effect type requested')
             return
+        self.setDriver('GV9', effect_type)
         ''' 0 - No effect, 1 - Reserved, 2 - Morph, 3 - Flame '''
         ''' However we skip 1 in the NodeDef '''
         if effect_type > 0:
@@ -1116,6 +1142,8 @@ class Tile(Light):
                 {'driver': 'GV5', 'value': 0, 'uom': 2},
                 {'driver': 'GV6', 'value': 0, 'uom': 20},
                 {'driver': 'GV7', 'value': 0, 'uom': 56},
+                {'driver': 'GV8', 'value': 0, 'uom': 56},
+                {'driver': 'GV9', 'value': 0, 'uom': 25},
                 {'driver': 'RR', 'value': 0, 'uom': 42}]
 
     id = 'lifxtile'

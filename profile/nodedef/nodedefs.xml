@@ -292,6 +292,8 @@
             <st id="RR" editor="lifxduration" />
             <st id="GV5" editor="bool" />
             <st id="GV6" editor="lifxuptime" />
+            <st id="GV8" editor="tilecnt" />
+            <st id="GV9" editor="lifxtef" />
         </sts>
         <cmds>
             <sends>

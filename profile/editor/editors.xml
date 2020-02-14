@@ -58,4 +58,7 @@
     <editor id="tilemem">
 	<range uom="56" min="1" max="10" prec="0" step="1" />
     </editor>
+    <editor id="tilecnt">
+	<range uom="56" min="1" max="5" prec="0" step="1" />
+    </editor>
 </editors>
